@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ddalangoo-agent"
+version = "0.1.0"
+description = "딸랑구 쇼핑 어시스턴트 — Standalone LangGraph Agent System"
+requires-python = ">=3.11"
+dependencies = [
+    "langgraph>=0.2.0",
+    "langchain>=0.3.0",
+    "langchain-anthropic>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "langchain-core>=0.3.0",
+    "anthropic>=0.40.0",
+    "openai>=1.0.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+ddalangoo = "main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
