@@ -70,6 +70,12 @@ cancel: 현재 흐름 중단
 unclear: 의도 판단 불가
 
 # Slot 필드
+recipe_dish: 재료를 구매하려는 요리명. 요리/음식 이름이 포함되고 "재료", "만들어줘", 인원수 등 재료 구매 맥락이 있으면 설정.
+  예: "된장찌개 재료 사줘" → recipe_dish="된장찌개"
+  예: "4인 가족을 위한 된장찌개 사줘" → recipe_dish="된장찌개"
+  예: "딸기 사줘" → recipe_dish=null (직접 상품)
+  예: "시판 된장찌개 사줘" → recipe_dish=null (완제품)
+recipe_people: 언급된 인원수. "4인 가족" → 4, "두 명" → 2, 없으면 null.
 keywords: 검색할 상품명, 카테고리, 브랜드
 exclude_keywords: 제외할 브랜드/플랫폼/상품명
 negative_constraints: 자연어 제외 조건

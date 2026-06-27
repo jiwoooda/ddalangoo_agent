@@ -306,19 +306,26 @@ def test_payment_agent_full_flow():
 
     base = dict(_state(user_id=uid, selected_product=product, quantity=2, keywords=["계란"], address_text="서울 강남구 테헤란로 1"))
 
-    # Step 1
+    # Step 1: cart_review 점검 단계
     s1 = {**base, "stage": "cart_shopping", "pending_action": None, "intent": "confirm"}
     r1 = payment_agent_node(s1)
-    assert r1["stage"] == "payment_processing"
-    assert r1["pending_action"]["type"] == "payment_method_confirm"
+    assert r1["stage"] == "cart_shopping"
+    assert r1["pending_action"]["type"] == "cart_review"
+    assert "원이에요" in r1["pending_action"]["message"]
 
-    # Step 2
-    s2 = {**base, "stage": "payment_processing", "pending_action": {"type": "payment_method_confirm"}, "intent": "confirm"}
+    # Step 1-5: cart_review 확인 → 배송지 확인
+    s1_5 = {**base, "stage": "cart_shopping", "pending_action": {"type": "cart_review"}, "intent": "confirm"}
+    r1_5 = payment_agent_node(s1_5)
+    assert r1_5["stage"] == "payment_processing"
+    assert r1_5["pending_action"]["type"] == "address_confirm"
+
+    # Step 2: 배송지 확인 → 결제수단 선택
+    s2 = {**base, "stage": "payment_processing", "pending_action": {"type": "address_confirm"}, "intent": "confirm"}
     r2 = payment_agent_node(s2)
-    assert r2["pending_action"]["type"] == "address_confirm"
+    assert r2["pending_action"]["type"] == "payment_method_confirm"
 
-    # Step 3
-    s3 = {**base, "stage": "payment_processing", "pending_action": {"type": "address_confirm"}, "intent": "confirm"}
+    # Step 3: 결제수단 확인 → 비밀번호
+    s3 = {**base, "stage": "payment_processing", "pending_action": {"type": "payment_method_confirm"}, "intent": "confirm"}
     r3 = payment_agent_node(s3)
     assert r3["pending_action"]["type"] == "payment_password"
 

@@ -19,7 +19,7 @@ def respond_node(state: ShoppingState) -> dict:
     pending_action = state.get("pending_action") or {}
 
     if state.get("needs_clarification"):
-        msg = immediate or state.get("clarification_reason") or "조금 더 자세히 말씀해 주세요."
+        msg = immediate or state.get("clarification_reason") or "다시 한번 말씀해 주세요."
 
     elif pending_action.get("message"):
         msg = pending_action["message"]
@@ -41,18 +41,6 @@ def respond_node(state: ShoppingState) -> dict:
 
     agent_logger.log_respond(msg, stage, pending_action)
     return {"messages": [{"role": "assistant", "content": msg}]}
-
-
-def quantity_check_node(state: ShoppingState) -> dict:
-    """수량이 없을 때 수량 질문 설정."""
-    keywords = state.get("keywords") or []
-    short_name = keywords[0] if keywords else (state.get("selected_product") or {}).get("product_name", "상품")
-    return {
-        "pending_action": {
-            "type": "quantity_confirm",
-            "message": f"{short_name} 몇 개 사실래요?",
-        }
-    }
 
 
 def ask_what_to_buy_node(state: ShoppingState) -> dict:

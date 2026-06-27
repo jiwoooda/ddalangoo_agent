@@ -1,0 +1,273 @@
+{
+  "dataset_name": "ddalangoo-response-v1",
+  "description": "딸랑구 response_agent 노인친화도 평가셋 v1 (카테고리별 15 cases)",
+  "version": "1",
+  "evaluation_criteria": {
+    "max_sentences": 3,
+    "max_sentence_length": 35,
+    "forbidden_words": ["플랫폼", "최저가", "가성비", "혜택", "할인율", "할인가", "프로모션"],
+    "expected_pass_rate": 1.0
+  },
+  "cases": [
+    {
+      "_comment": "── 식품류 (3) ──",
+      "input": {
+        "product": {
+          "product_name": "딸기 500g",
+          "price": 6900,
+          "platform": "naver",
+          "rating": 4.3,
+          "review_count": 850,
+          "delivery": "2-3일",
+          "product_url": "https://example.com/1"
+        },
+        "keywords": ["딸기"],
+        "condition": null,
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    },
+    {
+      "input": {
+        "product": {
+          "product_name": "계란 30개",
+          "price": 6200,
+          "platform": "coupang",
+          "rating": 4.1,
+          "review_count": 7800,
+          "delivery": "내일 도착",
+          "product_url": "https://example.com/2"
+        },
+        "keywords": ["계란"],
+        "condition": null,
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    },
+    {
+      "input": {
+        "product": {
+          "product_name": "서울우유 1L",
+          "price": 2400,
+          "platform": "coupang",
+          "rating": 4.3,
+          "review_count": 7800,
+          "delivery": "내일 도착",
+          "product_url": "https://example.com/3"
+        },
+        "keywords": ["우유"],
+        "condition": null,
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    },
+    {
+      "_comment": "── 건강식품 (3) ──",
+      "input": {
+        "product": {
+          "product_name": "종합비타민 90정",
+          "price": 24000,
+          "platform": "naver",
+          "rating": 4.5,
+          "review_count": 4200,
+          "delivery": "무료배송",
+          "product_url": "https://example.com/4"
+        },
+        "keywords": ["비타민"],
+        "condition": "무료배송",
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    },
+    {
+      "input": {
+        "product": {
+          "product_name": "유산균 60캡슐",
+          "price": 32000,
+          "platform": "kurly",
+          "rating": 4.6,
+          "review_count": 1900,
+          "delivery": "내일 아침",
+          "product_url": "https://example.com/5"
+        },
+        "keywords": ["유산균"],
+        "condition": null,
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    },
+    {
+      "input": {
+        "product": {
+          "product_name": "오메가3 90캡슐",
+          "price": 28000,
+          "platform": "naver",
+          "rating": 4.4,
+          "review_count": 3100,
+          "delivery": "2-3일",
+          "product_url": "https://example.com/6"
+        },
+        "keywords": ["오메가3"],
+        "condition": "인기순",
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    },
+    {
+      "_comment": "── 생활용품 (3) ──",
+      "input": {
+        "product": {
+          "product_name": "울트라 세탁세제 3kg",
+          "price": 12800,
+          "platform": "coupang",
+          "rating": 4.4,
+          "review_count": 3200,
+          "delivery": "내일 아침",
+          "product_url": "https://example.com/7"
+        },
+        "keywords": ["세탁세제"],
+        "condition": "빠른배송",
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    },
+    {
+      "input": {
+        "product": {
+          "product_name": "KF94 마스크 10매",
+          "price": 8900,
+          "platform": "naver",
+          "rating": 4.5,
+          "review_count": 2100,
+          "delivery": "2-3일",
+          "product_url": "https://example.com/8"
+        },
+        "keywords": ["마스크"],
+        "condition": null,
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    },
+    {
+      "input": {
+        "product": {
+          "product_name": "부드러운 칫솔 4개입",
+          "price": 4500,
+          "platform": "coupang",
+          "rating": 4.3,
+          "review_count": 5600,
+          "delivery": "내일 도착",
+          "product_url": "https://example.com/9"
+        },
+        "keywords": ["칫솔"],
+        "condition": null,
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    },
+    {
+      "_comment": "── 식재료 (3) ──",
+      "input": {
+        "product": {
+          "product_name": "참기름 330ml",
+          "price": 12000,
+          "platform": "coupang",
+          "rating": 4.7,
+          "review_count": 1850,
+          "delivery": "내일 도착",
+          "product_url": "https://example.com/10"
+        },
+        "keywords": ["참기름"],
+        "condition": "리뷰좋은",
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    },
+    {
+      "input": {
+        "product": {
+          "product_name": "아오리 사과 2kg",
+          "price": 19500,
+          "platform": "kurly",
+          "rating": 4.6,
+          "review_count": 5000,
+          "delivery": "내일 아침",
+          "product_url": "https://example.com/11"
+        },
+        "keywords": ["사과"],
+        "condition": "인기순",
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    },
+    {
+      "input": {
+        "product": {
+          "product_name": "국내산 현미 5kg",
+          "price": 22000,
+          "platform": "naver",
+          "rating": 4.5,
+          "review_count": 2300,
+          "delivery": "2-3일",
+          "product_url": "https://example.com/12"
+        },
+        "keywords": ["현미"],
+        "condition": null,
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    },
+    {
+      "_comment": "── 의류/잡화 (3) ──",
+      "input": {
+        "product": {
+          "product_name": "기본 운동화",
+          "price": 35000,
+          "platform": "coupang",
+          "rating": 4.0,
+          "review_count": 320,
+          "delivery": "내일 도착",
+          "product_url": "https://example.com/13"
+        },
+        "keywords": ["운동화"],
+        "condition": "최저가",
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    },
+    {
+      "input": {
+        "product": {
+          "product_name": "방풍 점퍼 M",
+          "price": 58000,
+          "platform": "naver",
+          "rating": 4.4,
+          "review_count": 780,
+          "delivery": "3-4일",
+          "product_url": "https://example.com/14"
+        },
+        "keywords": ["점퍼"],
+        "condition": null,
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    },
+    {
+      "input": {
+        "product": {
+          "product_name": "자외선 차단 모자",
+          "price": 18000,
+          "platform": "coupang",
+          "rating": 4.3,
+          "review_count": 1400,
+          "delivery": "내일 도착",
+          "product_url": "https://example.com/15"
+        },
+        "keywords": ["모자"],
+        "condition": null,
+        "preference_context": {}
+      },
+      "output": { "expected_elderly_pass": true }
+    }
+  ]
+}

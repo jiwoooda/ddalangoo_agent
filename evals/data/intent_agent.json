@@ -1,0 +1,762 @@
+[
+  {
+    "id": 1,
+    "category": "명시적_구매",
+    "input": {
+      "user_input": "사과 두 개 사줘",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "buy",
+      "keywords": ["사과"],
+      "exclude_keywords": [],
+      "quantity": 2,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "기본 구매 + 한국어 수량"
+  },
+  {
+    "id": 2,
+    "category": "명시적_구매",
+    "input": {
+      "user_input": "유기농 두부 사고 싶어",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "buy",
+      "keywords": ["유기농 두부"],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "복합 키워드 추출"
+  },
+  {
+    "id": 3,
+    "category": "명시적_구매",
+    "input": {
+      "user_input": "쿠팡에서 라면 주문해줘",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "buy",
+      "keywords": ["라면"],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": "coupang"
+    },
+    "note": "플랫폼 명시"
+  },
+  {
+    "id": 4,
+    "category": "명시적_구매",
+    "input": {
+      "user_input": "제일 싼 걸로 우유 사줘",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "buy",
+      "keywords": ["우유"],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": "최저가",
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "조건 추출"
+  },
+  {
+    "id": 5,
+    "category": "명시적_구매",
+    "input": {
+      "user_input": "빨리 오는 걸로 계란 사줘",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "buy",
+      "keywords": ["계란"],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": "빠른배송",
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "빠른배송 조건"
+  },
+  {
+    "id": 6,
+    "category": "재구매",
+    "input": {
+      "user_input": "저번에 산 두부 또 줘",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "reorder",
+      "keywords": ["두부"],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "명확한 재구매"
+  },
+  {
+    "id": 7,
+    "category": "재구매",
+    "input": {
+      "user_input": "그거 다시 시켜줘",
+      "stage": "product_confirming",
+      "pending_action": "product_confirm"
+    },
+    "expected_output": {
+      "intent": "reorder",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": true,
+      "override_platform": null
+    },
+    "note": "재구매이지만 대상 모호 → clarification"
+  },
+  {
+    "id": 8,
+    "category": "재구매",
+    "input": {
+      "user_input": "지난번에 주문한 거 똑같이",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "reorder",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": true,
+      "override_platform": null
+    },
+    "note": "상품 모호 → clarification"
+  },
+  {
+    "id": 9,
+    "category": "재구매",
+    "input": {
+      "user_input": "딸기 또 주문해줘",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "reorder",
+      "keywords": ["딸기"],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "명확한 재구매 상품명"
+  },
+  {
+    "id": 10,
+    "category": "재구매",
+    "input": {
+      "user_input": "저번에 샀던 세제 재주문",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "reorder",
+      "keywords": ["세제"],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "재구매 키워드 추출"
+  },
+  {
+    "id": 11,
+    "category": "pending_응답",
+    "input": {
+      "user_input": "응",
+      "stage": "product_confirming",
+      "pending_action": "product_confirm"
+    },
+    "expected_output": {
+      "intent": "confirm",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "상품 확인 동의"
+  },
+  {
+    "id": 12,
+    "category": "pending_응답",
+    "input": {
+      "user_input": "아니 다른 거",
+      "stage": "product_confirming",
+      "pending_action": "product_confirm"
+    },
+    "expected_output": {
+      "intent": "next",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "문제3: '아니' 붙어도 next (deny 아님)"
+  },
+  {
+    "id": 13,
+    "category": "pending_응답",
+    "input": {
+      "user_input": "싫어",
+      "stage": "product_confirming",
+      "pending_action": "product_confirm"
+    },
+    "expected_output": {
+      "intent": "deny",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "명확한 거절"
+  },
+  {
+    "id": 14,
+    "category": "pending_응답",
+    "input": {
+      "user_input": "세 개",
+      "stage": "product_confirming",
+      "pending_action": "quantity_confirm"
+    },
+    "expected_output": {
+      "intent": "confirm",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": 3,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "수량 확인 응답 → confirm + quantity"
+  },
+  {
+    "id": 15,
+    "category": "pending_응답",
+    "input": {
+      "user_input": "열 개 주세요",
+      "stage": "product_confirming",
+      "pending_action": "quantity_confirm"
+    },
+    "expected_output": {
+      "intent": "confirm",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": 10,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "한국어 수량 → confirm"
+  },
+  {
+    "id": 16,
+    "category": "pending_응답",
+    "input": {
+      "user_input": "1234",
+      "stage": "payment_processing",
+      "pending_action": "payment_password"
+    },
+    "expected_output": {
+      "intent": "confirm",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "결제 비밀번호 입력 → confirm"
+  },
+  {
+    "id": 17,
+    "category": "pending_응답",
+    "input": {
+      "user_input": "좋아 결제해줘",
+      "stage": "product_confirming",
+      "pending_action": "payment_method_confirm"
+    },
+    "expected_output": {
+      "intent": "confirm",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "결제수단 확인 동의"
+  },
+  {
+    "id": 18,
+    "category": "맥락_의존",
+    "input": {
+      "user_input": "다음 거 보여줘",
+      "stage": "product_confirming",
+      "pending_action": "product_confirm"
+    },
+    "expected_output": {
+      "intent": "next",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "다음 상품 요청"
+  },
+  {
+    "id": 19,
+    "category": "맥락_의존",
+    "input": {
+      "user_input": "더 싼 걸로 바꿔줘",
+      "stage": "product_confirming",
+      "pending_action": "product_confirm"
+    },
+    "expected_output": {
+      "intent": "refine",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": "최저가",
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "product_confirming에서 조건 변경 → refine"
+  },
+  {
+    "id": 20,
+    "category": "맥락_의존",
+    "input": {
+      "user_input": "리뷰 좋은 걸로 바꿔줘",
+      "stage": "searching",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "refine",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": "리뷰좋은",
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "searching에서 조건 변경 → refine"
+  },
+  {
+    "id": 21,
+    "category": "맥락_의존",
+    "input": {
+      "user_input": "취소할게",
+      "stage": "payment_processing",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "cancel",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "결제 중 취소"
+  },
+  {
+    "id": 22,
+    "category": "맥락_의존",
+    "input": {
+      "user_input": "이거 몇 그람이에요?",
+      "stage": "product_confirming",
+      "pending_action": "product_confirm"
+    },
+    "expected_output": {
+      "intent": "ask",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "상품 QA"
+  },
+  {
+    "id": 23,
+    "category": "모호한_발화",
+    "input": {
+      "user_input": "그거 주문해줘",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "unclear",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": true,
+      "override_platform": null
+    },
+    "note": "idle + 맥락 없는 지시어"
+  },
+  {
+    "id": 24,
+    "category": "모호한_발화",
+    "input": {
+      "user_input": "빨리",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "unclear",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": true,
+      "override_platform": null
+    },
+    "note": "의미 불명확"
+  },
+  {
+    "id": 25,
+    "category": "모호한_발화",
+    "input": {
+      "user_input": "좋아",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "unclear",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": true,
+      "override_platform": null
+    },
+    "note": "pending 없이 동의 표현 → unclear"
+  },
+  {
+    "id": 26,
+    "category": "모호한_발화",
+    "input": {
+      "user_input": "저번에 그거",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "reorder",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": true,
+      "override_platform": null
+    },
+    "note": "재구매 의도 있으나 상품 모호"
+  },
+  {
+    "id": 27,
+    "category": "모호한_발화",
+    "input": {
+      "user_input": "비싼 거 말고",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "unclear",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": true,
+      "override_platform": null
+    },
+    "note": "idle + 상품명 없이 조건만"
+  },
+  {
+    "id": 28,
+    "category": "한국어_수량",
+    "input": {
+      "user_input": "하나만 사줘",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "buy",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": 1,
+      "condition": null,
+      "needs_clarification": true,
+      "override_platform": null
+    },
+    "note": "수량 추출, 상품명 없어서 clarification"
+  },
+  {
+    "id": 29,
+    "category": "한국어_수량",
+    "input": {
+      "user_input": "두 개",
+      "stage": "product_confirming",
+      "pending_action": "quantity_confirm"
+    },
+    "expected_output": {
+      "intent": "confirm",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": 2,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "quantity_confirm 응답 → confirm + quantity"
+  },
+  {
+    "id": 30,
+    "category": "한국어_수량",
+    "input": {
+      "user_input": "스무 개 주세요",
+      "stage": "product_confirming",
+      "pending_action": "quantity_confirm"
+    },
+    "expected_output": {
+      "intent": "confirm",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": 20,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "한국어 수량 20"
+  },
+  {
+    "id": 31,
+    "category": "엣지_buy_vs_refine",
+    "input": {
+      "user_input": "풀무원 말고 CJ 두부 최저가로 찾아줘",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "buy",
+      "keywords": ["CJ 두부"],
+      "exclude_keywords": ["풀무원"],
+      "quantity": null,
+      "condition": "최저가",
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "문제1: idle + 제외조건 있어도 buy. exclude_keywords에 풀무원"
+  },
+  {
+    "id": 32,
+    "category": "엣지_buy_vs_refine",
+    "input": {
+      "user_input": "신선한 걸로 찾아줘",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "buy",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": true,
+      "override_platform": null
+    },
+    "note": "문제1: idle + 상품명 없음 → buy + clarification"
+  },
+  {
+    "id": 33,
+    "category": "엣지_buy_vs_refine",
+    "input": {
+      "user_input": "더 싼 걸로 바꿔줘",
+      "stage": "product_confirming",
+      "pending_action": "product_confirm"
+    },
+    "expected_output": {
+      "intent": "refine",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": "최저가",
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "product_confirming에서만 refine 허용"
+  },
+  {
+    "id": 34,
+    "category": "엣지_수량_규격_혼동",
+    "input": {
+      "user_input": "계란 10구짜리 두 판 사줘",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "buy",
+      "keywords": ["계란 10구"],
+      "exclude_keywords": [],
+      "quantity": 2,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "문제2+4: 10구는 규격→keyword 포함, 수량=2 (곱셈 금지)"
+  },
+  {
+    "id": 35,
+    "category": "엣지_수량_규격_혼동",
+    "input": {
+      "user_input": "우유 1L짜리 세 개 사줘",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "buy",
+      "keywords": ["우유 1L"],
+      "exclude_keywords": [],
+      "quantity": 3,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "규격(1L)은 keyword, 수량(3)만 quantity"
+  },
+  {
+    "id": 36,
+    "category": "엣지_수량_규격_혼동",
+    "input": {
+      "user_input": "라면 5개입 두 박스 사줘",
+      "stage": "idle",
+      "pending_action": null
+    },
+    "expected_output": {
+      "intent": "buy",
+      "keywords": ["라면 5개입"],
+      "exclude_keywords": [],
+      "quantity": 2,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "5개입은 규격→keyword, 두 박스=2만 quantity"
+  },
+  {
+    "id": 37,
+    "category": "엣지_deny_vs_next",
+    "input": {
+      "user_input": "아니 다른 걸로 보여줘",
+      "stage": "product_confirming",
+      "pending_action": "product_confirm"
+    },
+    "expected_output": {
+      "intent": "next",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "문제3: '아니' 붙어도 '다른 걸로' 있으면 next"
+  },
+  {
+    "id": 38,
+    "category": "엣지_deny_vs_next",
+    "input": {
+      "user_input": "싫어 다른 거",
+      "stage": "product_confirming",
+      "pending_action": "product_confirm"
+    },
+    "expected_output": {
+      "intent": "next",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": null,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "'싫어' + '다른 거' → next 우선"
+  },
+  {
+    "id": 39,
+    "category": "엣지_quantity_change_vs_confirm",
+    "input": {
+      "user_input": "다섯 개로 바꿔줘",
+      "stage": "product_confirming",
+      "pending_action": "product_confirm"
+    },
+    "expected_output": {
+      "intent": "quantity_change",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": 5,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "문제5: '바꿔줘' = quantity_change (confirm 아님)"
+  },
+  {
+    "id": 40,
+    "category": "엣지_quantity_change_vs_confirm",
+    "input": {
+      "user_input": "세 개로 변경해줘",
+      "stage": "product_confirming",
+      "pending_action": "product_confirm"
+    },
+    "expected_output": {
+      "intent": "quantity_change",
+      "keywords": [],
+      "exclude_keywords": [],
+      "quantity": 3,
+      "condition": null,
+      "needs_clarification": false,
+      "override_platform": null
+    },
+    "note": "문제5: '변경해줘' = quantity_change"
+  }
+]

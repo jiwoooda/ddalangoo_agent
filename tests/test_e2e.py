@@ -166,18 +166,19 @@ def run_scenario(
 # ── 시나리오 1: 일반 구매 전체 흐름 ───────────────────────────────────
 
 def test_buy_full_flow():
-    """구매 → 수량 확인 → 장바구니 → 결제수단 → 배송지 → 비밀번호 → 완료."""
+    """구매 → 수량 → 장바구니 담기 → 장바구니 확인 → 배송지 → 결제수단 → 비밀번호 → 완료."""
     results = run_scenario(
         title="일반 구매 전체 흐름",
         user_id="user_test",
         turns=[
-            ("딸기 사고 싶어",          "product_confirming"),   # 1: 상품 추천
-            ("응",                      None),                   # 2: confirm → 수량 없으면 quantity_check, 있으면 Step 0
-            ("2개요",                    None),                   # 3: 수량 입력 → Step 0 or payment
-            ("결제할게요",               "payment_processing"),   # 4: Step 1 → payment_method_confirm
-            ("응",                      "payment_processing"),   # 5: Step 2 → address_confirm
-            ("응",                      "payment_processing"),   # 6: Step 3 → payment_password
-            ("1234",                    "completed"),            # 7: Step 4 → 완료
+            ("딸기 사고 싶어",     "product_confirming"),   # 1: 상품 추천
+            ("응",                 None),                   # 2: confirm → 수량 없어서 재질문
+            ("2개요",              None),                   # 3: 수량 → Step 0 담기 (cart_shopping)
+            ("결제할게요",          None),                   # 4: Step 1 → cart_review (cart_shopping)
+            ("응",                 "payment_processing"),   # 5: Step 1-5 → address_confirm
+            ("응",                 "payment_processing"),   # 6: Step 2 → payment_method_confirm
+            ("응",                 "payment_processing"),   # 7: Step 3 → payment_password
+            ("1234",               "completed"),            # 8: Step 4 → 완료
         ],
     )
     assert any(r.stage == "completed" for r in results), "결제 완료까지 도달하지 못함"
@@ -192,13 +193,14 @@ def test_reorder_flow():
         title="재구매 흐름",
         user_id="user_001",
         turns=[
-            ("저번에 산 딸기 다시 사줘",  None),    # 1: reorder → 이력 탐색 (resolved/ambiguous/no_match)
-            ("응",                        None),    # 2: confirm (resolved이면 바로 confirm)
-            ("1개",                       None),    # 3: 수량
-            ("결제할게요",                 None),    # 4: Step 1
-            ("응",                        None),    # 5: Step 2
-            ("응",                        None),    # 6: Step 3
-            ("1234",                      "completed"),  # 7: 완료
+            ("저번에 산 딸기 다시 사줘",  None),                  # 1: reorder → 이력 탐색
+            ("응",                        None),                  # 2: confirm
+            ("1개",                       None),                  # 3: 수량 → Step 0 담기
+            ("결제할게요",                 None),                  # 4: Step 1 → cart_review
+            ("응",                        "payment_processing"),  # 5: Step 1-5 → address_confirm
+            ("응",                        "payment_processing"),  # 6: Step 2 → payment_method_confirm
+            ("응",                        "payment_processing"),  # 7: Step 3 → payment_password
+            ("1234",                      "completed"),           # 8: Step 4 → 완료
         ],
     )
     assert len(results) >= 1, "한 턴도 실행되지 않음"

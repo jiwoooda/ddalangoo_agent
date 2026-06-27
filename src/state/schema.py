@@ -10,6 +10,7 @@ Stage = Literal[
     "searching",
     "product_confirming",
     "cart_shopping",
+    "recipe_planning",
     "payment_processing",
     "payment_password_required",
     "completed",
@@ -53,6 +54,8 @@ PendingActionType = Literal[
     "continue_shopping",
     "what_to_buy",
     "no_more_products",
+    "cart_review",
+    "ingredient_confirm",
     "payment_method_confirm",
     "payment_password",
 ]
@@ -123,6 +126,12 @@ class ShoppingState(TypedDict):
     # ── 브라우저 세션 (mock) ──
     storage_state_path: Optional[str]
     cart_items: list[dict[str, Any]]
+
+    # ── 레시피 쇼핑 ──
+    recipe_dish: Optional[str]
+    recipe_people: Optional[int]
+    recipe_items: list[dict[str, Any]]
+    current_recipe_item_index: int
 
     # ── Memory Agent context ──
     recommendation_context: Optional[dict[str, Any]]
@@ -307,6 +316,10 @@ def get_default_shopping_state(user_id: str, session_id: str) -> dict:
         "session_id": session_id,
         "conversation_id": None,
         "user_id": user_id,
+        "recipe_dish": None,
+        "recipe_people": None,
+        "recipe_items": [],
+        "current_recipe_item_index": 0,
         "recommendation_context": None,
         "reorder_resolution": None,
         "storage_state_path": None,

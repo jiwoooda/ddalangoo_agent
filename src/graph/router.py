@@ -8,7 +8,7 @@ RouteName = Literal[
     "product_agent",
     "response_agent",
     "payment_agent",
-    "quantity_check",
+    "recipe_agent",
     "ask_what_to_buy",
     "respond",
     "cancel",
@@ -57,6 +57,12 @@ def route(state: ShoppingState) -> RouteName:
             if intent == "confirm":
                 return _decide("payment_agent")
             return _decide("respond")
+        if pending_type == "cart_review":
+            if intent in ("confirm", "quantity_change"):
+                return _decide("payment_agent")
+            if intent in ("deny", "cancel"):
+                return _decide("cancel")
+            return _decide("respond")
         if intent == "confirm":
             return _decide("payment_agent")
         if intent in ("deny", "next"):
@@ -69,8 +75,7 @@ def route(state: ShoppingState) -> RouteName:
         if pa_type == "quantity_confirm":
             if state.get("quantity"):
                 return _decide("payment_agent")
-            if intent in ("confirm", "quantity_change"):
-                return _decide("quantity_check")
+            return _decide("respond")
 
         if pa_type == "product_select":
             if intent in ("confirm", "option_select"):
@@ -84,7 +89,11 @@ def route(state: ShoppingState) -> RouteName:
 
         if intent == "confirm":
             if not state.get("quantity"):
-                return _decide("quantity_check")
+                return _decide("respond")
+            return _decide("payment_agent")
+
+        # LLM이 수량 변경을 quantity_change로 분류했지만 실제로는 구매 확정 수량 입력
+        if intent == "quantity_change" and state.get("quantity"):
             return _decide("payment_agent")
 
         if intent in ("buy", "reorder"):
@@ -109,6 +118,16 @@ def route(state: ShoppingState) -> RouteName:
         if intent == "ask":
             return _decide("response_agent")
         return _decide("respond")
+
+    if stage == "recipe_planning":
+        if pending_type == "ingredient_confirm":
+            if intent in ("confirm", "deny", "refine"):
+                return _decide("recipe_agent")
+        return _decide("respond")
+
+    # buy + recipe_dish (아직 recipe_items 없음) → recipe_agent
+    if intent == "buy" and state.get("recipe_dish") and not state.get("recipe_items"):
+        return _decide("recipe_agent")
 
     routing_map: dict[str, RouteName] = {
         "buy": "context_agent",
@@ -153,7 +172,23 @@ def after_context_agent(state: ShoppingState) -> Literal["product_agent", "respo
     return dest
 
 
-def after_payment_agent(state: ShoppingState) -> Literal["context_agent", "respond"]:
+def after_recipe_agent(state: ShoppingState) -> Literal["context_agent", "respond"]:
+    stage = state.get("stage")
+    intent = state.get("intent") or "-"
+    pending_type = _ptype(state.get("pending_action"))
+
+    def _decide(dest):
+        agent_logger.log_router("recipe_agent", dest, intent, stage or "-", pending_type)
+        return dest
+
+    # Mode 3: stage=idle → 재료 하나 쇼핑 시작 → context_agent
+    if stage == "idle":
+        return _decide("context_agent")
+    # Mode 1/2/4: recipe_planning or cart_shopping → respond (메시지 표시)
+    return _decide("respond")
+
+
+def after_payment_agent(state: ShoppingState) -> Literal["context_agent", "recipe_agent", "respond"]:
     stage = state.get("stage", "idle")
     pending_type = _ptype(state.get("pending_action"))
     intent = state.get("intent") or "-"
@@ -164,6 +199,14 @@ def after_payment_agent(state: ShoppingState) -> Literal["context_agent", "respo
 
     if stage == "completed":
         return _decide("context_agent")
+
+    # 레시피 모드: 장바구니 담기 후 다음 재료로 자동 진행
+    if stage == "cart_shopping" and pending_type == "continue_shopping":
+        recipe_items = state.get("recipe_items") or []
+        idx = state.get("current_recipe_item_index") or 0
+        if recipe_items and idx <= len(recipe_items) - 1:
+            return _decide("recipe_agent")
+
     return _decide("respond")
 
 

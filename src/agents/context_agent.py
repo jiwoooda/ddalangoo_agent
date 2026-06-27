@@ -7,7 +7,9 @@ Context Agent Node.
 """
 from typing import Any, Optional
 from langgraph.store.base import BaseStore
+from langchain_core.messages import HumanMessage
 
+from configs.llm_config import get_llm
 from src.state.schema import ShoppingState
 from src.utils.agent_logger import agent_logger
 from src.tools.mock_tools import (
@@ -23,6 +25,14 @@ from src.tools.mock_tools import (
 PERSONAL_VECTOR_THRESHOLD = 20
 
 _preference_cache: dict[str, dict[str, Any]] = {}
+_context_llm = None
+
+
+def _get_llm():
+    global _context_llm
+    if _context_llm is None:
+        _context_llm = get_llm("context", temperature=0, max_tokens=400)
+    return _context_llm
 
 
 def _merge_recommendation_results(
@@ -101,8 +111,8 @@ def _compute_general_preference(histories: list[dict[str, Any]]) -> dict[str, An
 
 
 def _generate_llm_summary(preference: dict[str, Any], keyword_history: Optional[list] = None) -> str:
+    """LangSmith 자동 추적: raw anthropic 대신 LangChain ChatModel 사용."""
     try:
-        import anthropic
         brands = ", ".join(b["brand"] for b in (preference.get("preferred_brands") or [])[:3])
         pr = preference.get("price_range") or {}
         repurchase = ", ".join((preference.get("repurchase_patterns") or [])[:3])
@@ -124,13 +134,7 @@ def _generate_llm_summary(preference: dict[str, Any], keyword_history: Optional[
                 prompt += f"\n- 관련 키워드 구매이력: {kw_names}"
             prompt += "\n\n위 키워드 관련 구매이력도 포함해 요약하세요."
 
-        client = anthropic.Anthropic()
-        response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=400,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response.content[0].text.strip()
+        return _get_llm().invoke([HumanMessage(content=prompt)]).content.strip()
     except Exception:
         return preference.get("summary", "")
 
@@ -161,7 +165,12 @@ def build_preference_context(user_id: str, keywords: list[str]) -> dict[str, Any
                 "platform": h.get("platform"),
             }
             for h in histories
-            if any(kw.lower() in (h.get("product_name") or "").lower() for kw in keywords)
+            if any(
+                kw.lower() in (h.get("product_name") or "").lower()
+                or kw.lower() in (h.get("keyword") or "").lower()
+                or kw.lower() in (h.get("category") or "").lower()
+                for kw in keywords
+            )
         ][:5]
 
         if keyword_history:

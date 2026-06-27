@@ -7,9 +7,9 @@ with_structured_output(Pydantic)으로 스키마를 강제해 누락 방지.
 import re
 from typing import Literal, Optional
 from pydantic import BaseModel, Field, field_validator
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage
 
+from configs.llm_config import get_llm
 from src.state.schema import ShoppingState
 from src.prompts.intent_prompt import INTENT_AGENT_PROMPT
 from src.utils.agent_logger import agent_logger
@@ -35,6 +35,52 @@ _KR_NUM = {
     "열": 10, "십": 10,
     "스물": 20, "스무": 20, "이십": 20,
 }
+
+def _looks_like_quantity_reply(text: str) -> bool:
+    """STT 텍스트가 수량 답변처럼 보이는지 판단."""
+    import re
+    t = text.strip()
+    if re.fullmatch(r'\d+', t):
+        return True
+    units = r'(개|인분|명|병|통|팩|봉|캔|묶음|박스|세트)'
+    kr_nums = r'(하나|한|둘|두|셋|세|넷|네|다섯|여섯|일곱|여덟|아홉|열|\d+)'
+    return bool(re.search(kr_nums + r'\s*' + units, t))
+
+
+def _normalize_keyword_tokens(keywords: list[str]) -> list[str]:
+    """중복·공백 제거 및 빈 문자열 필터."""
+    seen: set[str] = set()
+    result = []
+    for kw in keywords:
+        kw = kw.strip()
+        if kw and kw not in seen:
+            seen.add(kw)
+            result.append(kw)
+    return result
+
+
+_STOP_WORDS = frozenset({
+    "사줘", "사줄래", "사주세요", "사고싶어", "사고 싶어", "구매", "구매해줘", "주문",
+    "주문해줘", "찾아줘", "보여줘", "주세요", "해줘", "해줄래", "싶어", "좀", "저",
+    "제", "그냥", "그거", "이거", "저거",
+})
+
+def _fallback_search_keywords(user_input: str) -> list[str]:
+    """LLM이 빈 keywords 반환 시 raw text에서 단순 휴리스틱 추출."""
+    import re
+    tokens = re.split(r'[\s,]+', user_input.strip())
+    result = [t for t in tokens if t and t not in _STOP_WORDS and len(t) >= 2]
+    return result[:3]
+
+
+_BUY_TRIGGERS = frozenset({"사줘", "사줄래", "사주세요", "구매해", "구매해줘", "주문해", "사고싶어", "사 줘"})
+
+def _should_force_buy_from_freeform(user_input: str, intent: str, stage: str) -> bool:
+    """idle 상태에서 buy 트리거가 있는데 LLM이 다른 intent를 뽑았을 때 buy로 교정."""
+    if intent == "buy" or stage != "idle":
+        return False
+    return any(t in user_input for t in _BUY_TRIGGERS)
+
 
 def _parse_quantity(v) -> Optional[int]:
     if v is None:
@@ -62,6 +108,8 @@ class IntentOutput(BaseModel):
         json_schema_extra={"examples": [1, 2, 3, 5, 10]},
     )
     condition: Optional[ConditionType] = Field(default=None, description="검색 조건")
+    recipe_dish: Optional[str] = Field(default=None, description="재료 구매 요리명 (예: 된장찌개). 직접 상품 구매면 null")
+    recipe_people: Optional[int] = Field(default=None, description="인원수 (예: 4인 가족 → 4). 없으면 null")
     target_platforms: list[str] = Field(default_factory=list, description="비교 대상 플랫폼 목록")
     override_platform: Optional[str] = Field(default=None, description="명시적으로 지정한 단일 플랫폼")
     current_option_value: Optional[str] = Field(default=None, description="명시된 상품 옵션값")
@@ -77,14 +125,14 @@ class IntentOutput(BaseModel):
         return _parse_quantity(v)
 
 
-_llm: ChatOpenAI | None = None
+_llm = None
 _structured_llm = None
 
 
 def _get_llm():
     global _llm, _structured_llm
     if _llm is None:
-        _llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        _llm = get_llm("intent", temperature=0)
         _structured_llm = _llm.with_structured_output(IntentOutput)
     return _structured_llm
 
@@ -127,6 +175,8 @@ def intent_agent_node(state: ShoppingState) -> dict:
             "negative_constraints": [],
             "quantity": state.get("quantity"),
             "condition": None,
+            "recipe_dish": state.get("recipe_dish"),
+            "recipe_people": state.get("recipe_people"),
             "target_platforms": [],
             "override_platform": None,
             "current_option_value": None,
@@ -134,35 +184,55 @@ def intent_agent_node(state: ShoppingState) -> dict:
             "needs_clarification": True,
             "clarification_reason": "응답 파싱 오류",
             "confidence": 0.0,
-            "immediate_response": "다시 말씀해 주세요.",
+            "immediate_response": "다시 한번 말씀해 주세요.",
             "last_agent": "intent_agent",
             "tool_calls": None,
             "tool_results": None,
         }
 
+    intent = parsed.intent
+
+    # ── buy 강제 교정: idle에서 사줘/구매해 등 트리거 있는데 LLM이 다른 intent ──
+    if _should_force_buy_from_freeform(user_input, intent, stage):
+        intent = "buy"
+
     quantity = parsed.quantity
-    if pending_type == "quantity_confirm":
-        direct = _parse_quantity(user_input)
-        if direct is not None:
-            quantity = direct
+    # quantity_confirm 또는 product_confirm(수량 미입력) 대기 중 수량 답변 → 재파싱 + intent 교정
+    if pending_type in ("quantity_confirm", "product_confirm"):
+        if _looks_like_quantity_reply(user_input):
+            direct = _parse_quantity(user_input)
+            if direct is not None:
+                quantity = direct
+                # product_confirm 상태에서 수량을 말하는 건 구매 의사 확정으로 해석
+                if pending_type == "product_confirm" and not state.get("quantity"):
+                    intent = "confirm"
 
     _search_intents = {"buy", "reorder", "refine", "compare_platforms"}
-    if quantity is None and parsed.intent not in _search_intents:
+    if quantity is None and intent not in _search_intents:
         quantity = state.get("quantity")
 
     # 검색과 무관한 intent는 기존 keywords 유지 (ask/confirm/deny/next 등이 keywords를 덮어쓰면 안 됨)
-    if parsed.intent in _search_intents:
-        keywords = parsed.keywords or state.get("keywords") or []
+    if intent in _search_intents:
+        keywords = _normalize_keyword_tokens(parsed.keywords or []) or state.get("keywords") or []
+        # LLM이 빈 keywords 반환 → 휴리스틱 추출
+        if not keywords:
+            keywords = _fallback_search_keywords(user_input)
     else:
-        keywords = state.get("keywords") or parsed.keywords or []
+        keywords = state.get("keywords") or _normalize_keyword_tokens(parsed.keywords or [])
+
+    # recipe 필드는 buy intent일 때만 갱신, 그 외엔 state 값 유지
+    recipe_dish = parsed.recipe_dish if intent == "buy" else (parsed.recipe_dish or state.get("recipe_dish"))
+    recipe_people = parsed.recipe_people if intent == "buy" else (parsed.recipe_people or state.get("recipe_people"))
 
     result = {
-        "intent": parsed.intent,
+        "intent": intent,
         "keywords": keywords,
         "exclude_keywords": parsed.exclude_keywords,
         "negative_constraints": parsed.negative_constraints,
         "quantity": quantity,
         "condition": parsed.condition,
+        "recipe_dish": recipe_dish,
+        "recipe_people": recipe_people,
         "target_platforms": parsed.target_platforms,
         "override_platform": parsed.override_platform,
         "current_option_value": parsed.current_option_value,

@@ -88,16 +88,7 @@ def payment_agent_node(state: ShoppingState) -> dict:
     quantity = _coerce_positive_int(state.get("quantity"), default=None)
     delivery_info = selected_product.get("delivery", "")
 
-    # 수량 미확정
-    if quantity is None:
-        return {
-            "stage": "product_confirming",
-            "error": None,
-            "last_agent": "payment_agent",
-            "pending_action": {"type": "quantity_confirm", "message": f"{short_name} 몇 개 사실래요?"},
-        }
-
-    total = price * quantity
+    total = price * (quantity or 1)
 
     intent = state.get("intent")
     _log_in = {"intent": intent, "pending_type": pending_type, "quantity": quantity, "stage": stage}
@@ -126,19 +117,10 @@ def payment_agent_node(state: ShoppingState) -> dict:
         agent_logger.log(f"[payment_agent] Step 0 완료 | 장바구니 {len(cart)}개  총액 {sum(i['total'] for i in cart):,}원")
         return output
 
-    # ── Step 1: 총액 + 결제수단 확인 ──
-    if stage == "cart_shopping" or pending_type is None:
+    # ── Step 1: 장바구니 최종 점검 (cart_review) ──
+    if (stage == "cart_shopping" or pending_type is None) and pending_type != "cart_review":
         cart = mock_get_cart(user_id)
-        if cart:
-            cart_total = sum(item["total"] for item in cart)
-            items_summary = ", ".join(
-                f"{(item.get('keywords') or [item.get('product_name', '상품')])[0]} {item.get('quantity', 1)}개"
-                for item in cart
-            )
-            payment_msg = f"{items_summary}, 총 {cart_total:,}원이에요. 네이버로 결제할까요?"
-        elif selected_product:
-            payment_msg = f"{short_name} {quantity}개, {total:,}원이에요. 네이버로 결제할까요?"
-        else:
+        if not cart and not selected_product:
             output = {
                 "stage": "cart_shopping",
                 "error": "payment_precheck_missing_product",
@@ -147,18 +129,54 @@ def payment_agent_node(state: ShoppingState) -> dict:
             }
             agent_logger.log_payment_agent(_log_in, output)
             return output
+
+        cart = cart or []
+        if cart:
+            cart_total = sum(item["total"] for item in cart)
+            items_summary = ", ".join(
+                f"{(item.get('keywords') or [item.get('product_name', '상품')])[0]} {item.get('quantity', 1)}개"
+                for item in cart
+            )
+            review_msg = f"총 {cart_total:,}원이에요. 수량 바꾸거나 빼실 게 있으면 말씀해 주세요."
+        else:
+            review_msg = f"{short_name} {quantity or 1}개, {total:,}원이에요. 수량 바꾸거나 빼실 게 있으면 말씀해 주세요."
+
         output = {
-            "stage": "payment_processing",
+            "stage": "cart_shopping",
             "error": None,
             "last_agent": "payment_agent",
-            "pending_action": {"type": "payment_method_confirm", "message": payment_msg},
+            "pending_action": {"type": "cart_review", "message": review_msg},
         }
         agent_logger.log_payment_agent(_log_in, output)
-        agent_logger.log(f"[payment_agent] Step 1 완료 | 총액 확인 → 결제수단 선택 대기")
+        agent_logger.log(f"[payment_agent] Step 1 완료 | 장바구니 점검 대기")
         return output
 
-    # ── Step 2: 결제수단 확인 → 배송지 안내 ──
-    if pending_type == "payment_method_confirm":
+    # ── Step 1-5: cart_review 확인 → 결제수단 선택 ──
+    if pending_type == "cart_review":
+        if intent == "quantity_change":
+            new_qty = _coerce_positive_int(state.get("quantity"), default=quantity)
+            if new_qty and selected_product:
+                from src.tools.mock_tools import mock_clear_cart
+                mock_clear_cart(user_id)
+                mock_add_to_cart(user_id, selected_product, new_qty, keywords)
+            cart = mock_get_cart(user_id)
+            cart_total = sum(item["total"] for item in cart) if cart else total
+            items_summary = ", ".join(
+                f"{(item.get('keywords') or [item.get('product_name', '상품')])[0]} {item.get('quantity', 1)}개"
+                for item in cart
+            ) if cart else f"{short_name} {new_qty}개"
+            review_msg = f"총 {cart_total:,}원이에요. 수량 바꾸거나 빼실 게 있으면 말씀해 주세요."
+            output = {
+                "stage": "cart_shopping",
+                "quantity": new_qty,
+                "cart_items": cart,
+                "error": None,
+                "last_agent": "payment_agent",
+                "pending_action": {"type": "cart_review", "message": review_msg},
+            }
+            agent_logger.log_payment_agent(_log_in, output)
+            return output
+
         address = _build_delivery_address(state)
         addr_display = _format_address(address)
         if not addr_display:
@@ -177,11 +195,33 @@ def payment_agent_node(state: ShoppingState) -> dict:
             "pending_action": {"type": "address_confirm", "message": f"{_short_address(addr_display)}로 보낼게요. 맞으시죠?"},
         }
         agent_logger.log_payment_agent(_log_in, output)
-        agent_logger.log(f"[payment_agent] Step 2 완료 | 배송지={addr_display}")
+        agent_logger.log(f"[payment_agent] Step 1-5 완료 | 배송지={addr_display}")
         return output
 
-    # ── Step 3: 배송지 확인 → 비밀번호 요청 ──
+    # ── Step 2: 배송지 확인 → 결제수단 선택 ──
     if pending_type == "address_confirm":
+        cart = mock_get_cart(user_id)
+        if cart:
+            cart_total = sum(item["total"] for item in cart)
+            items_summary = ", ".join(
+                f"{(item.get('keywords') or [item.get('product_name', '상품')])[0]} {item.get('quantity', 1)}개"
+                for item in cart
+            )
+            payment_msg = f"{items_summary}, 총 {cart_total:,}원이에요. 네이버로 결제할까요?"
+        else:
+            payment_msg = f"{short_name} {quantity or 1}개, {total:,}원이에요. 네이버로 결제할까요?"
+        output = {
+            "stage": "payment_processing",
+            "error": None,
+            "last_agent": "payment_agent",
+            "pending_action": {"type": "payment_method_confirm", "message": payment_msg},
+        }
+        agent_logger.log_payment_agent(_log_in, output)
+        agent_logger.log(f"[payment_agent] Step 2 완료 | 결제수단 선택 대기")
+        return output
+
+    # ── Step 3: 결제수단 확인 → 비밀번호 요청 ──
+    if pending_type == "payment_method_confirm":
         output = {
             "stage": "payment_processing",
             "error": None,

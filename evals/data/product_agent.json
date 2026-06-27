@@ -1,0 +1,435 @@
+{
+  "dataset_name": "ddalangoo-product-v1",
+  "description": "딸랑구 product_agent 랭킹 평가셋 v1 (조건별 4개 x 5조건 + 선호기반 4개 = 24 cases)",
+  "version": "1",
+  "conditions": ["최저가", "인기순", "빠른배송", "무료배송", "리뷰좋은", "선호기반"],
+  "evaluation_note": "expected_top_product 필드와 ranked[0]을 비교. LLM 판단이므로 일치율 ≥ 80% 목표",
+  "cases": [
+    {
+      "_comment": "── 최저가 (4) ──",
+      "input": {
+        "keywords": ["딸기"],
+        "condition": "최저가",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "프리미엄 딸기 1kg", "price": 18000, "platform": "coupang", "rating": 4.8, "review_count": 3500, "product_url": "https://example.com/1", "delivery": "내일 도착" },
+          { "product_name": "딸기 500g", "price": 6900, "platform": "naver", "rating": 4.3, "review_count": 850, "product_url": "https://example.com/2", "delivery": "2-3일" },
+          { "product_name": "신선 딸기 800g", "price": 12500, "platform": "kurly", "rating": 4.5, "review_count": 1200, "product_url": "https://example.com/3", "delivery": "내일 아침" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "딸기 500g",
+        "expected_top_price_max": 10000,
+        "reason": "최저가 조건 — 6,900원 상품이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["계란"],
+        "condition": "최저가",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "유정란 30구", "price": 9800, "platform": "kurly", "rating": 4.6, "review_count": 2100, "product_url": "https://example.com/4", "delivery": "내일 아침" },
+          { "product_name": "계란 30개", "price": 6200, "platform": "naver", "rating": 4.1, "review_count": 550, "product_url": "https://example.com/5", "delivery": "2-3일" },
+          { "product_name": "구운 계란 30개", "price": 8500, "platform": "coupang", "rating": 4.4, "review_count": 900, "product_url": "https://example.com/6", "delivery": "내일 도착" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "계란 30개",
+        "expected_top_price_max": 7000,
+        "reason": "최저가 조건 — 6,200원 상품이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["운동화"],
+        "condition": "최저가",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "나이키 운동화", "price": 89000, "platform": "naver", "rating": 4.7, "review_count": 5200, "product_url": "https://example.com/7", "delivery": "2-3일" },
+          { "product_name": "기본 운동화", "price": 35000, "platform": "coupang", "rating": 4.0, "review_count": 320, "product_url": "https://example.com/8", "delivery": "내일 도착" },
+          { "product_name": "아디다스 러닝화", "price": 65000, "platform": "naver", "rating": 4.5, "review_count": 1800, "product_url": "https://example.com/9", "delivery": "3-4일" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "기본 운동화",
+        "expected_top_price_max": 40000,
+        "reason": "최저가 조건 — 35,000원 상품이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["우유"],
+        "condition": "최저가",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "유기농 우유 900ml", "price": 4800, "platform": "kurly", "rating": 4.7, "review_count": 1600, "product_url": "https://example.com/10", "delivery": "내일 아침" },
+          { "product_name": "서울우유 1L", "price": 2400, "platform": "coupang", "rating": 4.3, "review_count": 7800, "product_url": "https://example.com/11", "delivery": "내일 도착" },
+          { "product_name": "매일우유 900ml", "price": 3200, "platform": "naver", "rating": 4.4, "review_count": 3200, "product_url": "https://example.com/12", "delivery": "2일" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "서울우유 1L",
+        "expected_top_price_max": 3000,
+        "reason": "최저가 조건 — 2,400원 상품이 1위"
+      }
+    },
+    {
+      "_comment": "── 인기순 (4) ──",
+      "input": {
+        "keywords": ["딸기"],
+        "condition": "인기순",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "딸기 500g", "price": 6900, "platform": "naver", "rating": 4.2, "review_count": 520, "product_url": "https://example.com/13", "delivery": "2-3일" },
+          { "product_name": "프리미엄 딸기 1kg", "price": 18000, "platform": "coupang", "rating": 4.8, "review_count": 3500, "product_url": "https://example.com/14", "delivery": "내일 도착" },
+          { "product_name": "신선 딸기 800g", "price": 12500, "platform": "kurly", "rating": 4.5, "review_count": 1200, "product_url": "https://example.com/15", "delivery": "내일 아침" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "프리미엄 딸기 1kg",
+        "expected_top_review_min": 3000,
+        "reason": "인기순 조건 — 리뷰 3,500개로 가장 많은 상품이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["참기름"],
+        "condition": "인기순",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "들기름 200ml", "price": 8900, "platform": "naver", "rating": 4.3, "review_count": 210, "product_url": "https://example.com/16", "delivery": "2-3일" },
+          { "product_name": "참기름 330ml", "price": 12000, "platform": "coupang", "rating": 4.7, "review_count": 1850, "product_url": "https://example.com/17", "delivery": "내일 도착" },
+          { "product_name": "참기름 200ml", "price": 9500, "platform": "kurly", "rating": 4.5, "review_count": 890, "product_url": "https://example.com/18", "delivery": "내일 아침" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "참기름 330ml",
+        "expected_top_review_min": 1500,
+        "reason": "인기순 조건 — 리뷰 1,850개로 가장 많은 상품이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["계란"],
+        "condition": "인기순",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "유정란 30구", "price": 9800, "platform": "kurly", "rating": 4.6, "review_count": 4500, "product_url": "https://example.com/19", "delivery": "내일 아침" },
+          { "product_name": "계란 30개", "price": 6200, "platform": "naver", "rating": 4.1, "review_count": 820, "product_url": "https://example.com/20", "delivery": "2-3일" },
+          { "product_name": "구운 계란 30개", "price": 8500, "platform": "coupang", "rating": 4.4, "review_count": 2200, "product_url": "https://example.com/21", "delivery": "내일 도착" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "유정란 30구",
+        "expected_top_review_min": 4000,
+        "reason": "인기순 조건 — 리뷰 4,500개로 가장 많은 상품이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["사과"],
+        "condition": "인기순",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "사과 1kg", "price": 9800, "platform": "naver", "rating": 4.0, "review_count": 300, "product_url": "https://example.com/22", "delivery": "3일" },
+          { "product_name": "아오리 사과 2kg", "price": 19500, "platform": "kurly", "rating": 4.6, "review_count": 5000, "product_url": "https://example.com/23", "delivery": "내일 아침" },
+          { "product_name": "사과 선물세트 3kg", "price": 35000, "platform": "coupang", "rating": 4.4, "review_count": 1500, "product_url": "https://example.com/24", "delivery": "내일 도착" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "아오리 사과 2kg",
+        "expected_top_review_min": 4500,
+        "reason": "인기순 조건 — 리뷰 5,000개로 가장 많은 상품이 1위"
+      }
+    },
+    {
+      "_comment": "── 빠른배송 (4) ──",
+      "input": {
+        "keywords": ["딸기"],
+        "condition": "빠른배송",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "딸기 500g", "price": 6900, "platform": "naver", "rating": 4.2, "review_count": 520, "product_url": "https://example.com/25", "delivery": "3-4일 소요" },
+          { "product_name": "프리미엄 딸기 1kg", "price": 18000, "platform": "coupang", "rating": 4.8, "review_count": 3500, "product_url": "https://example.com/26", "delivery": "오늘 도착" },
+          { "product_name": "신선 딸기 800g", "price": 12500, "platform": "kurly", "rating": 4.5, "review_count": 1200, "product_url": "https://example.com/27", "delivery": "내일 아침" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "프리미엄 딸기 1kg",
+        "reason": "빠른배송 조건 — 오늘 도착 상품이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["마스크"],
+        "condition": "빠른배송",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "KF94 마스크 10매", "price": 8900, "platform": "naver", "rating": 4.5, "review_count": 2100, "product_url": "https://example.com/28", "delivery": "2-3일" },
+          { "product_name": "KF80 마스크 20매", "price": 5500, "platform": "coupang", "rating": 4.3, "review_count": 9800, "product_url": "https://example.com/29", "delivery": "오늘 밤 도착" },
+          { "product_name": "비말 마스크 30매", "price": 4200, "platform": "kurly", "rating": 4.1, "review_count": 1500, "product_url": "https://example.com/30", "delivery": "4-5일" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "KF80 마스크 20매",
+        "reason": "빠른배송 조건 — 오늘 밤 도착 상품이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["세탁세제"],
+        "condition": "빠른배송",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "울트라 세탁세제 3kg", "price": 12800, "platform": "coupang", "rating": 4.4, "review_count": 3200, "product_url": "https://example.com/31", "delivery": "내일 아침" },
+          { "product_name": "퍼실 세탁세제 2.4kg", "price": 18500, "platform": "naver", "rating": 4.6, "review_count": 1800, "product_url": "https://example.com/32", "delivery": "3-4일" },
+          { "product_name": "리큐 세탁세제 3L", "price": 9900, "platform": "kurly", "rating": 4.2, "review_count": 650, "product_url": "https://example.com/33", "delivery": "내일 아침" }
+        ]
+      },
+      "output": {
+        "expected_top_delivery_keyword": "내일 아침",
+        "reason": "빠른배송 조건 — 내일 아침 도착 상품 중 더 나은 것이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["비타민"],
+        "condition": "빠른배송",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "종합비타민 90정", "price": 24000, "platform": "naver", "rating": 4.5, "review_count": 4200, "product_url": "https://example.com/34", "delivery": "5-7일" },
+          { "product_name": "비타민C 1000mg 60정", "price": 15000, "platform": "coupang", "rating": 4.3, "review_count": 6500, "product_url": "https://example.com/35", "delivery": "내일 도착" },
+          { "product_name": "멀티비타민 120정", "price": 32000, "platform": "kurly", "rating": 4.7, "review_count": 2100, "product_url": "https://example.com/36", "delivery": "4-5일" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "비타민C 1000mg 60정",
+        "reason": "빠른배송 조건 — 내일 도착 상품이 1위"
+      }
+    },
+    {
+      "_comment": "── 무료배송 (4) ──",
+      "input": {
+        "keywords": ["우유"],
+        "condition": "무료배송",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "서울우유 1L", "price": 2400, "platform": "naver", "rating": 4.3, "review_count": 7800, "product_url": "https://example.com/37", "delivery": "배송비 3,000원" },
+          { "product_name": "연세우유 900ml", "price": 3100, "platform": "coupang", "rating": 4.5, "review_count": 2400, "product_url": "https://example.com/38", "delivery": "무료배송" },
+          { "product_name": "남양우유 900ml", "price": 2800, "platform": "kurly", "rating": 4.2, "review_count": 1100, "product_url": "https://example.com/39", "delivery": "배송비 2,500원" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "연세우유 900ml",
+        "reason": "무료배송 조건 — 배송비 없는 상품이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["딸기"],
+        "condition": "무료배송",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "딸기 500g", "price": 6900, "platform": "naver", "rating": 4.2, "review_count": 520, "product_url": "https://example.com/40", "delivery": "무료배송" },
+          { "product_name": "신선 딸기 800g", "price": 10500, "platform": "coupang", "rating": 4.5, "review_count": 1200, "product_url": "https://example.com/41", "delivery": "배송비 2,000원" },
+          { "product_name": "프리미엄 딸기 1kg", "price": 18000, "platform": "kurly", "rating": 4.8, "review_count": 3500, "product_url": "https://example.com/42", "delivery": "배송비 3,000원" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "딸기 500g",
+        "reason": "무료배송 조건 — 배송비 없는 상품이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["참기름"],
+        "condition": "무료배송",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "들기름 200ml", "price": 8900, "platform": "naver", "rating": 4.3, "review_count": 210, "product_url": "https://example.com/43", "delivery": "배송비 2,500원" },
+          { "product_name": "참기름 200ml", "price": 9500, "platform": "kurly", "rating": 4.5, "review_count": 890, "product_url": "https://example.com/44", "delivery": "무료배송" },
+          { "product_name": "참기름 330ml", "price": 12000, "platform": "coupang", "rating": 4.7, "review_count": 1850, "product_url": "https://example.com/45", "delivery": "배송비 3,000원" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "참기름 200ml",
+        "reason": "무료배송 조건 — 배송비 없는 상품이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["비타민"],
+        "condition": "무료배송",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "종합비타민 90정", "price": 24000, "platform": "naver", "rating": 4.5, "review_count": 4200, "product_url": "https://example.com/46", "delivery": "무료배송" },
+          { "product_name": "비타민C 1000mg 60정", "price": 15000, "platform": "coupang", "rating": 4.3, "review_count": 6500, "product_url": "https://example.com/47", "delivery": "배송비 2,000원" },
+          { "product_name": "멀티비타민 120정", "price": 32000, "platform": "kurly", "rating": 4.7, "review_count": 2100, "product_url": "https://example.com/48", "delivery": "무료배송" }
+        ]
+      },
+      "output": {
+        "expected_top_delivery": "무료배송",
+        "reason": "무료배송 조건 — 배송비 없는 상품 중 더 나은 것이 1위"
+      }
+    },
+    {
+      "_comment": "── 리뷰좋은 (4) ──",
+      "input": {
+        "keywords": ["딸기"],
+        "condition": "리뷰좋은",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "딸기 500g", "price": 6900, "platform": "naver", "rating": 3.8, "review_count": 520, "product_url": "https://example.com/49", "delivery": "2-3일" },
+          { "product_name": "프리미엄 딸기 1kg", "price": 18000, "platform": "coupang", "rating": 4.9, "review_count": 3500, "product_url": "https://example.com/50", "delivery": "내일 도착" },
+          { "product_name": "신선 딸기 800g", "price": 12500, "platform": "kurly", "rating": 4.5, "review_count": 1200, "product_url": "https://example.com/51", "delivery": "내일 아침" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "프리미엄 딸기 1kg",
+        "expected_top_rating_min": 4.8,
+        "reason": "리뷰좋은 조건 — 평점 4.9로 가장 높은 상품이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["계란"],
+        "condition": "리뷰좋은",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "유정란 30구", "price": 9800, "platform": "kurly", "rating": 4.7, "review_count": 4500, "product_url": "https://example.com/52", "delivery": "내일 아침" },
+          { "product_name": "계란 30개", "price": 6200, "platform": "naver", "rating": 4.0, "review_count": 820, "product_url": "https://example.com/53", "delivery": "2-3일" },
+          { "product_name": "구운 계란 30개", "price": 8500, "platform": "coupang", "rating": 4.2, "review_count": 2200, "product_url": "https://example.com/54", "delivery": "내일 도착" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "유정란 30구",
+        "expected_top_rating_min": 4.6,
+        "reason": "리뷰좋은 조건 — 평점 4.7로 가장 높은 상품이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["운동화"],
+        "condition": "리뷰좋은",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "기본 운동화", "price": 35000, "platform": "coupang", "rating": 3.5, "review_count": 320, "product_url": "https://example.com/55", "delivery": "내일 도착" },
+          { "product_name": "나이키 운동화", "price": 89000, "platform": "naver", "rating": 4.8, "review_count": 5200, "product_url": "https://example.com/56", "delivery": "2-3일" },
+          { "product_name": "아디다스 러닝화", "price": 65000, "platform": "naver", "rating": 4.6, "review_count": 1800, "product_url": "https://example.com/57", "delivery": "3-4일" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "나이키 운동화",
+        "expected_top_rating_min": 4.7,
+        "reason": "리뷰좋은 조건 — 평점 4.8로 가장 높은 상품이 1위"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["사과"],
+        "condition": "리뷰좋은",
+        "preference_context": {},
+        "candidates": [
+          { "product_name": "사과 1kg", "price": 9800, "platform": "naver", "rating": 4.0, "review_count": 300, "product_url": "https://example.com/58", "delivery": "3일" },
+          { "product_name": "아오리 사과 2kg", "price": 19500, "platform": "kurly", "rating": 4.5, "review_count": 5000, "product_url": "https://example.com/59", "delivery": "내일 아침" },
+          { "product_name": "홍로 사과 3kg", "price": 28000, "platform": "coupang", "rating": 4.8, "review_count": 2200, "product_url": "https://example.com/60", "delivery": "내일 도착" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "홍로 사과 3kg",
+        "expected_top_rating_min": 4.7,
+        "reason": "리뷰좋은 조건 — 평점 4.8로 가장 높은 상품이 1위"
+      }
+    },
+    {
+      "_comment": "── 선호기반 (4) ──",
+      "input": {
+        "keywords": ["계란"],
+        "condition": "선호기반",
+        "preference_context": {
+          "summary": "컬리 새벽배송을 자주 이용하고, 동물복지 계란을 반복 구매합니다.",
+          "preferred_brands": [{ "brand": "컬리", "count": 11 }, { "brand": "풀무원", "count": 2 }],
+          "price_range": { "avg": 6246, "min": 2490, "max": 18000 },
+          "repurchase_patterns": ["[조인] 동물복지 백색 유정 초란 10구"],
+          "preferred_platform": "kurly"
+        },
+        "candidates": [
+          { "product_name": "일반 계란 15구", "price": 6900, "platform": "naver", "rating": 4.7, "review_count": 1800, "product_url": "https://example.com/pref-1", "delivery": "내일 도착" },
+          { "product_name": "동물복지 계란 15구", "price": 7200, "platform": "kurly", "rating": 4.7, "review_count": 1750, "product_url": "https://example.com/pref-2", "delivery": "새벽배송" },
+          { "product_name": "구운 계란 15구", "price": 7000, "platform": "coupang", "rating": 4.7, "review_count": 1900, "product_url": "https://example.com/pref-3", "delivery": "로켓배송" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "동물복지 계란 15구",
+        "reason": "선호기반 — 반복 구매 패턴과 컬리 선호가 일치"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["두부"],
+        "condition": "선호기반",
+        "preference_context": {
+          "summary": "풀무원 두부를 자주 구매하고, 2천~6천 원대 신선식품을 선호합니다.",
+          "preferred_brands": [{ "brand": "풀무원", "count": 2 }, { "brand": "컬리", "count": 11 }],
+          "price_range": { "avg": 6246, "min": 2490, "max": 18000 },
+          "repurchase_patterns": ["풀무원 국산콩 두부 (부침) 300g"],
+          "preferred_platform": "kurly"
+        },
+        "candidates": [
+          { "product_name": "풀무원 국산콩 두부 300g", "price": 2490, "platform": "kurly", "rating": 4.6, "review_count": 1200, "product_url": "https://example.com/pref-4", "delivery": "새벽배송" },
+          { "product_name": "CJ 단단한 두부 300g", "price": 2400, "platform": "coupang", "rating": 4.6, "review_count": 1250, "product_url": "https://example.com/pref-5", "delivery": "로켓배송" },
+          { "product_name": "시장 손두부 500g", "price": 3900, "platform": "naver", "rating": 4.6, "review_count": 1100, "product_url": "https://example.com/pref-6", "delivery": "내일 도착" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "풀무원 국산콩 두부 300g",
+        "reason": "선호기반 — 선호 브랜드와 가격대가 일치"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["딸기"],
+        "condition": "선호기반",
+        "preference_context": {
+          "summary": "BerryFarm 딸기 구매 이력이 있고, 1만 원 안팎 과일 구매가 많습니다.",
+          "preferred_brands": [{ "brand": "BerryFarm", "count": 2 }, { "brand": "컬리", "count": 11 }],
+          "price_range": { "avg": 6246, "min": 2490, "max": 18000 },
+          "repurchase_patterns": ["Fresh strawberry 500g", "Frozen strawberry 1kg"],
+          "preferred_platform": "naver"
+        },
+        "candidates": [
+          { "product_name": "BerryFarm 생딸기 500g", "price": 10900, "platform": "naver", "rating": 4.6, "review_count": 900, "product_url": "https://example.com/pref-7", "delivery": "내일 도착" },
+          { "product_name": "프리미엄 딸기 500g", "price": 12900, "platform": "kurly", "rating": 4.6, "review_count": 980, "product_url": "https://example.com/pref-8", "delivery": "새벽배송" },
+          { "product_name": "논산 딸기 500g", "price": 9900, "platform": "coupang", "rating": 4.6, "review_count": 960, "product_url": "https://example.com/pref-9", "delivery": "로켓배송" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "BerryFarm 생딸기 500g",
+        "reason": "선호기반 — 선호 브랜드와 과거 딸기 구매 이력이 일치"
+      }
+    },
+    {
+      "input": {
+        "keywords": ["참기름"],
+        "condition": "선호기반",
+        "preference_context": {
+          "summary": "조미료는 네이버에서 구매한 이력이 있고, 8천 원대 상품에 만족했습니다.",
+          "preferred_brands": [{ "brand": "CJ", "count": 1 }],
+          "price_range": { "avg": 8000, "min": 8000, "max": 8000 },
+          "repurchase_patterns": ["국산 참기름 300ml"],
+          "preferred_platform": "naver"
+        },
+        "candidates": [
+          { "product_name": "CJ 국산 참기름 300ml", "price": 8200, "platform": "naver", "rating": 4.6, "review_count": 900, "product_url": "https://example.com/pref-10", "delivery": "내일 도착" },
+          { "product_name": "오뚜기 참기름 500ml", "price": 15900, "platform": "coupang", "rating": 4.7, "review_count": 892, "product_url": "https://example.com/pref-11", "delivery": "로켓배송" },
+          { "product_name": "컬리 국산 참기름 200ml", "price": 13800, "platform": "kurly", "rating": 4.7, "review_count": 329, "product_url": "https://example.com/pref-12", "delivery": "새벽배송" }
+        ]
+      },
+      "output": {
+        "expected_top_product": "CJ 국산 참기름 300ml",
+        "reason": "선호기반 — 선호 브랜드, 플랫폼, 가격대가 일치"
+      }
+    }
+  ]
+}

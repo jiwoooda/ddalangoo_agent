@@ -5,6 +5,8 @@
 Playwright, 결제 SDK, Meta-MCP, DB, VectorDB 모두 mock.
 """
 import uuid
+import json
+from pathlib import Path
 from typing import Any, Optional
 
 # ══════════════════════════════════════════════
@@ -337,6 +339,49 @@ MOCK_PRODUCTS: dict[str, list[dict[str, Any]]] = {
         },
     ],
 }
+
+MOCK_PRODUCTS["달걀"] = MOCK_PRODUCTS["계란"]
+MOCK_PRODUCTS["두부"] = [
+    {
+        "product_name": "풀무원 국산콩 두부 300g",
+        "price": 2490,
+        "rating": 4.7,
+        "review_count": 1820,
+        "delivery": "새벽배송",
+        "delivery_fee": 0,
+        "platform": "kurly",
+        "image_url": "https://mock.kurly.com/tofu-pulmuone.jpg",
+        "product_url": "https://mock.kurly.com/products/pulmuone-tofu-300g",
+        "is_sold_out": False,
+        "raw": {},
+    },
+    {
+        "product_name": "CJ 행복한콩 두부 300g",
+        "price": 2700,
+        "rating": 4.6,
+        "review_count": 1400,
+        "delivery": "로켓배송",
+        "delivery_fee": 0,
+        "platform": "coupang",
+        "image_url": "https://mock.coupang.com/tofu-cj.jpg",
+        "product_url": "https://mock.coupang.com/products/cj-tofu-300g",
+        "is_sold_out": False,
+        "raw": {},
+    },
+    {
+        "product_name": "국산콩 두부 500g",
+        "price": 3900,
+        "rating": 4.5,
+        "review_count": 760,
+        "delivery": "내일 도착",
+        "delivery_fee": 0,
+        "platform": "naver",
+        "image_url": "https://mock.naver.com/tofu.jpg",
+        "product_url": "https://mock.naver.com/products/tofu-500g",
+        "is_sold_out": False,
+        "raw": {},
+    },
+]
 
 DEFAULT_PRODUCTS = [
     {
@@ -774,16 +819,34 @@ MOCK_PREFERENCE_MEMORY: dict[str, dict[str, Any]] = {
 }
 
 
+def _load_external_mock_db() -> dict[str, Any]:
+    path = Path(__file__).resolve().parents[2] / "evals" / "data" / "mock_db.json"
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+_EXTERNAL_MOCK_DB = _load_external_mock_db()
+if _EXTERNAL_MOCK_DB:
+    MOCK_USERS = _EXTERNAL_MOCK_DB.get("users") or MOCK_USERS
+    MOCK_ADDRESSES = _EXTERNAL_MOCK_DB.get("addresses") or MOCK_ADDRESSES
+    MOCK_PURCHASE_HISTORY = _EXTERNAL_MOCK_DB.get("purchase_history") or MOCK_PURCHASE_HISTORY
+    MOCK_PREFERENCE_MEMORY = _EXTERNAL_MOCK_DB.get("preference_memory") or MOCK_PREFERENCE_MEMORY
+
+
 def mock_get_user(user_id: str) -> Optional[dict[str, Any]]:
-    return MOCK_USERS.get(user_id)
+    return MOCK_USERS.get(str(user_id))
 
 
 def mock_get_default_address(user_id: str) -> Optional[dict[str, Any]]:
-    return MOCK_ADDRESSES.get(user_id)
+    return MOCK_ADDRESSES.get(str(user_id))
 
 
 def mock_get_purchase_history(user_id: str) -> list[dict[str, Any]]:
-    return MOCK_PURCHASE_HISTORY.get(user_id, [])
+    return MOCK_PURCHASE_HISTORY.get(str(user_id), [])
 
 
 def mock_keyword_search_history(user_id: str, keywords: list[str], limit: int = 5) -> list[dict[str, Any]]:
@@ -799,7 +862,7 @@ def mock_keyword_search_history(user_id: str, keywords: list[str], limit: int = 
 
 
 def mock_get_preference_memory(user_id: str) -> dict[str, Any]:
-    return MOCK_PREFERENCE_MEMORY.get(user_id, {})
+    return MOCK_PREFERENCE_MEMORY.get(str(user_id), {})
 
 
 def mock_update_preference_from_purchase(
@@ -808,6 +871,7 @@ def mock_update_preference_from_purchase(
     keywords: list[str],
 ) -> None:
     """구매 완료 후 선호도 메모리 자동 업데이트 (Learning & Adaptation)."""
+    user_id = str(user_id)
     pref = MOCK_PREFERENCE_MEMORY.setdefault(user_id, {
         "platform_pattern": {},
         "price_range": {},
@@ -884,6 +948,7 @@ def mock_save_purchase_history(
     keyword: Optional[str] = None,
 ) -> str:
     from datetime import datetime
+    user_id = str(user_id)
     history_id = f"ph_{str(uuid.uuid4())[:8]}"
     entry = {
         "id": history_id,

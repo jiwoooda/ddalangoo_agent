@@ -20,6 +20,7 @@ from src.graph.router import (
     after_reorder_agent,
     after_product_agent,
     after_response_agent,
+    after_recipe_agent,
     after_payment_agent,
 )
 from src.agents.intent_agent import intent_agent_node
@@ -27,7 +28,8 @@ from src.agents.context_agent import context_agent_node
 from src.agents.reorder_agent import reorder_agent_node
 from src.agents.product_agent import product_agent_node
 from src.agents.response_agent import response_agent_node
-from src.agents.nodes import wait_for_input_node, respond_node, cancel_node, quantity_check_node, ask_what_to_buy_node
+from src.agents.nodes import wait_for_input_node, respond_node, cancel_node, ask_what_to_buy_node
+from src.agents.recipe_agent import recipe_agent_node
 from src.payment.subgraph import payment_agent_node
 
 
@@ -56,9 +58,9 @@ def build_graph(checkpointer=None, store: Optional[BaseStore] = None):
     builder.add_node("reorder_agent", reorder_agent_node)
     builder.add_node("product_agent", product_agent_node)
     builder.add_node("response_agent", response_agent_node)
+    builder.add_node("recipe_agent", recipe_agent_node)
     builder.add_node("payment_agent", payment_agent_node)
     builder.add_node("respond", respond_node)
-    builder.add_node("quantity_check", quantity_check_node)
     builder.add_node("ask_what_to_buy", ask_what_to_buy_node)
     builder.add_node("cancel", cancel_node)
 
@@ -73,8 +75,8 @@ def build_graph(checkpointer=None, store: Optional[BaseStore] = None):
             "reorder_agent": "reorder_agent",
             "product_agent": "product_agent",
             "response_agent": "response_agent",
+            "recipe_agent": "recipe_agent",
             "payment_agent": "payment_agent",
-            "quantity_check": "quantity_check",
             "ask_what_to_buy": "ask_what_to_buy",
             "respond": "respond",
             "cancel": "cancel",
@@ -94,7 +96,6 @@ def build_graph(checkpointer=None, store: Optional[BaseStore] = None):
         {"respond": "respond", "product_agent": "product_agent"},
     )
 
-    builder.add_edge("quantity_check", "respond")
     builder.add_edge("ask_what_to_buy", "respond")
 
     builder.add_conditional_edges(
@@ -109,9 +110,15 @@ def build_graph(checkpointer=None, store: Optional[BaseStore] = None):
     )
 
     builder.add_conditional_edges(
+        "recipe_agent",
+        after_recipe_agent,
+        {"context_agent": "context_agent", "respond": "respond"},
+    )
+
+    builder.add_conditional_edges(
         "payment_agent",
         after_payment_agent,
-        {"context_agent": "context_agent", "respond": "respond"},
+        {"context_agent": "context_agent", "recipe_agent": "recipe_agent", "respond": "respond"},
     )
     builder.add_edge("cancel", "respond")
 
