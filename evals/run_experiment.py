@@ -185,11 +185,21 @@ def run_context_experiment(backend: str, model: str | None) -> None:
         keywords = inputs.get("keywords", [])
         histories = mock_get_purchase_history(user_id)
         pref = build_preference_context(user_id, keywords)
+
+        # DeepEval Faithfulness용: 구매이력을 문자열 리스트로 변환
+        retrieval_context = [
+            f"{h.get('product_name', '')} / 브랜드:{h.get('brand', '')} / "
+            f"가격:{h.get('price_at_purchase', '')}원 / 플랫폼:{h.get('platform', '')}"
+            for h in histories
+        ] or ["구매이력 없음"]
+
         return {
+            **pref,
             "summary": pref.get("keyword_summary") or pref.get("summary", ""),
             "preference_context": pref,
             "purchase_count": len(histories),
             "keyword_history_count": len(pref.get("keyword_history") or []),
+            "_retrieval_context": retrieval_context,
             "latency_ms": (time.perf_counter() - started) * 1000,
         }
 

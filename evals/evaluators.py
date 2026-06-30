@@ -11,6 +11,7 @@ evaluator 시그니처: (outputs: dict, reference_outputs: dict) -> dict
 from __future__ import annotations
 import math
 import re
+import os
 
 # ── 어르신 친화도 기준 (response_agent와 동일) ──────────────────────────
 _ELDERLY_FORBIDDEN = ["플랫폼", "최저가", "가성비", "혜택", "할인율", "할인가", "프로모션"]
@@ -399,28 +400,81 @@ def keyword_history_products_evaluator(outputs: dict, reference_outputs: dict) -
     }
 
 
+def _make_deepeval_claude_model():
+    """DeepEval judge용 Claude 모델 래퍼."""
+    from deepeval.models import DeepEvalBaseLLM
+
+    class ClaudeJudge(DeepEvalBaseLLM):
+        def __init__(self):
+            self.model_name = os.getenv("CONTEXT_MODEL", "claude-haiku-4-5-20251001")
+
+        def get_model_name(self) -> str:
+            return self.model_name
+
+        def load_model(self):
+            from langchain_anthropic import ChatAnthropic
+            return ChatAnthropic(model=self.model_name, temperature=0, max_tokens=1024)
+
+        def generate(self, prompt: str, schema=None) -> tuple:
+            model = self.load_model()
+            from langchain_core.messages import HumanMessage
+            if schema:
+                structured = model.with_structured_output(schema)
+                result = structured.invoke([HumanMessage(content=prompt)])
+                return result, 0
+            result = model.invoke([HumanMessage(content=prompt)])
+            return result.content, 0
+
+        async def a_generate(self, prompt: str, schema=None) -> tuple:
+            return self.generate(prompt, schema)
+
+    return ClaudeJudge()
+
+
 def context_faithfulness_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    """
+    DeepEval Faithfulness: summary가 구매이력(retrieval_context)에 없는 내용을 지어냈는지 검사.
+    Claude를 judge로 사용. DeepEval 미설치/오류 시 키워드 기반 fallback.
+    """
     if (reference_outputs or {}).get("expected_cold_start"):
         return {"key": "faithfulness", "score": None, "comment": "cold-start N/A"}
-    text = (outputs or {}).get("summary", "")
-    expected_terms = (reference_outputs or {}).get("expected_terms") or []
-    if not expected_terms:
-        return {"key": "faithfulness", "score": None}
-    hits = sum(1 for term in expected_terms if term in text)
-    return {
-        "key": "faithfulness",
-        "score": round(hits / len(expected_terms), 3),
-        "comment": f"covered={hits}/{len(expected_terms)}",
-    }
 
+    summary = (outputs or {}).get("summary", "")
+    retrieval_context = (outputs or {}).get("_retrieval_context") or []
+    if not summary:
+        return {"key": "faithfulness", "score": None, "comment": "summary 없음"}
 
-def context_coverage_evaluator(outputs: dict, reference_outputs: dict) -> dict:
-    text = (outputs or {}).get("summary", "")
-    expected_terms = (reference_outputs or {}).get("expected_terms") or []
-    if not expected_terms:
-        return {"key": "coverage", "score": None}
-    hits = [term for term in expected_terms if term in text]
-    return {"key": "coverage", "score": 1.0 if len(hits) == len(expected_terms) else 0.0, "comment": f"{hits}"}
+    try:
+        from deepeval.metrics import FaithfulnessMetric
+        from deepeval.test_case import LLMTestCase
+
+        if not retrieval_context:
+            raise ValueError("retrieval_context 없음 → fallback")
+
+        judge = _make_deepeval_claude_model()
+        metric = FaithfulnessMetric(threshold=0.5, model=judge, verbose_mode=False)
+        test_case = LLMTestCase(
+            input="사용자 선호도 요약",
+            actual_output=summary,
+            retrieval_context=retrieval_context,
+        )
+        metric.measure(test_case)
+        return {
+            "key": "faithfulness",
+            "score": round(metric.score, 3),
+            "comment": metric.reason or "",
+        }
+    except Exception as e:
+        # fallback: expected_terms 키워드 포함 여부
+        expected_terms = (reference_outputs or {}).get("expected_terms") or []
+        if not expected_terms:
+            return {"key": "faithfulness", "score": None, "comment": f"fallback({e})"}
+        hits = sum(1 for term in expected_terms if term in summary)
+        return {
+            "key": "faithfulness",
+            "score": round(hits / len(expected_terms), 3),
+            "comment": f"fallback keyword: {hits}/{len(expected_terms)}",
+        }
 
 
 def context_cold_start_evaluator(outputs: dict, reference_outputs: dict) -> dict:
@@ -468,8 +522,7 @@ CONTEXT_EVALUATORS = [
     repurchase_patterns_evaluator,
     keyword_history_evaluator,
     keyword_history_products_evaluator,
-    context_faithfulness_evaluator,
-    context_coverage_evaluator,
+    context_faithfulness_evaluator,   # DeepEval Faithfulness (fallback: keyword)
     context_cold_start_evaluator,
     context_conciseness_evaluator,
     latency_evaluator,
