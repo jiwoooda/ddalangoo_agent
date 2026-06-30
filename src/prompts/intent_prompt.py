@@ -63,9 +63,9 @@ next: 다른 상품 후보 요청
 refine: 이미 진행 중인 검색 흐름에서 검색 조건 변경 (stage=idle이면 절대 사용 금지)
 compare_platforms: 여러 플랫폼 비교 요청
 quantity_change: 기존에 선택한 수량을 변경 (pending_action이 quantity_confirm일 때는 절대 사용 금지)
-address_change: 배송지 제공 또는 변경
+address_change: 새 배송지 제공 또는 변경 (새 주소를 말할 때만. "확인해줘"·"어디야"처럼 조회하는 경우는 ask로 분류)
 option_select: 상품 옵션 선택
-ask: 상품/배송/가격/리뷰 질문
+ask: 상품/배송/가격/리뷰 질문, 배송지·주소 조회 ("배송지 확인해줘", "어디로 배달돼?" 등)
 cancel: 현재 흐름 중단
 unclear: 의도 판단 불가
 
@@ -94,6 +94,7 @@ deny: 현재 pending_action을 명확히 거절 (아니, 싫어, 별로)
 # Clarification 규칙
 needs_clarification=true:
 - "그거", "저번에 그거"처럼 맥락 없는 모호한 지시
+- "그거 다시 시켜줘", "지난번에 주문한 거 똑같이"처럼 재구매 의도는 명확하지만 상품명이 없으면 intent="reorder", needs_clarification=true로 둔다
 - idle 상태에서 조건만 있고 상품명 없는 경우
 - pending_action 없이 확인/거절만 말한 경우
 

@@ -9,7 +9,9 @@
     },
     "expected_output": {
       "intent": "buy",
-      "keywords": ["사과"],
+      "keywords": [
+        "사과"
+      ],
       "exclude_keywords": [],
       "quantity": 2,
       "condition": null,
@@ -28,7 +30,9 @@
     },
     "expected_output": {
       "intent": "buy",
-      "keywords": ["유기농 두부"],
+      "keywords": [
+        "유기농 두부"
+      ],
       "exclude_keywords": [],
       "quantity": null,
       "condition": null,
@@ -47,7 +51,9 @@
     },
     "expected_output": {
       "intent": "buy",
-      "keywords": ["라면"],
+      "keywords": [
+        "라면"
+      ],
       "exclude_keywords": [],
       "quantity": null,
       "condition": null,
@@ -66,7 +72,9 @@
     },
     "expected_output": {
       "intent": "buy",
-      "keywords": ["우유"],
+      "keywords": [
+        "우유"
+      ],
       "exclude_keywords": [],
       "quantity": null,
       "condition": "최저가",
@@ -85,7 +93,9 @@
     },
     "expected_output": {
       "intent": "buy",
-      "keywords": ["계란"],
+      "keywords": [
+        "계란"
+      ],
       "exclude_keywords": [],
       "quantity": null,
       "condition": "빠른배송",
@@ -104,7 +114,9 @@
     },
     "expected_output": {
       "intent": "reorder",
-      "keywords": ["두부"],
+      "keywords": [
+        "두부"
+      ],
       "exclude_keywords": [],
       "quantity": null,
       "condition": null,
@@ -128,9 +140,11 @@
       "quantity": null,
       "condition": null,
       "needs_clarification": true,
-      "override_platform": null
+      "override_platform": null,
+      "clarification_reason": "어떤 상품을 다시 주문할지 확인 필요",
+      "immediate_response": "어떤 상품을 다시 주문할까요?"
     },
-    "note": "재구매이지만 대상 모호 → clarification"
+    "note": "재구매이지만 대상 모호 → clarification / 상품명 없는 재구매는 reorder clarification"
   },
   {
     "id": 8,
@@ -147,9 +161,11 @@
       "quantity": null,
       "condition": null,
       "needs_clarification": true,
-      "override_platform": null
+      "override_platform": null,
+      "clarification_reason": "어떤 상품을 다시 주문할지 확인 필요",
+      "immediate_response": "어떤 상품을 다시 주문할까요?"
     },
-    "note": "상품 모호 → clarification"
+    "note": "상품 모호 → clarification / 상품명 없는 재구매는 reorder clarification"
   },
   {
     "id": 9,
@@ -161,7 +177,9 @@
     },
     "expected_output": {
       "intent": "reorder",
-      "keywords": ["딸기"],
+      "keywords": [
+        "딸기"
+      ],
       "exclude_keywords": [],
       "quantity": null,
       "condition": null,
@@ -180,7 +198,9 @@
     },
     "expected_output": {
       "intent": "reorder",
-      "keywords": ["세제"],
+      "keywords": [
+        "세제"
+      ],
       "exclude_keywords": [],
       "quantity": null,
       "condition": null,
@@ -308,7 +328,7 @@
     "category": "pending_응답",
     "input": {
       "user_input": "좋아 결제해줘",
-      "stage": "product_confirming",
+      "stage": "payment_processing",
       "pending_action": "payment_method_confirm"
     },
     "expected_output": {
@@ -432,7 +452,9 @@
       "quantity": null,
       "condition": null,
       "needs_clarification": true,
-      "override_platform": null
+      "override_platform": null,
+      "clarification_reason": "어떤 상품을 원하시는지 확인 필요",
+      "immediate_response": "어떤 상품을 찾고 계세요?"
     },
     "note": "idle + 맥락 없는 지시어"
   },
@@ -451,7 +473,9 @@
       "quantity": null,
       "condition": null,
       "needs_clarification": true,
-      "override_platform": null
+      "override_platform": null,
+      "clarification_reason": "발화 의미 불명확",
+      "immediate_response": "어떤 상품을 찾고 계세요?"
     },
     "note": "의미 불명확"
   },
@@ -470,7 +494,9 @@
       "quantity": null,
       "condition": null,
       "needs_clarification": true,
-      "override_platform": null
+      "override_platform": null,
+      "clarification_reason": "맥락 없이 동의 표현만 있음",
+      "immediate_response": "어떤 상품을 찾고 계세요?"
     },
     "note": "pending 없이 동의 표현 → unclear"
   },
@@ -489,9 +515,11 @@
       "quantity": null,
       "condition": null,
       "needs_clarification": true,
-      "override_platform": null
+      "override_platform": null,
+      "clarification_reason": "어떤 상품을 다시 주문할지 확인 필요",
+      "immediate_response": "어떤 상품을 다시 주문할까요?"
     },
-    "note": "재구매 의도 있으나 상품 모호"
+    "note": "재구매 의도 있으나 상품 모호 / 상품명 없는 재구매는 reorder clarification"
   },
   {
     "id": 27,
@@ -508,7 +536,9 @@
       "quantity": null,
       "condition": null,
       "needs_clarification": true,
-      "override_platform": null
+      "override_platform": null,
+      "clarification_reason": "상품명 없이 조건만 있음",
+      "immediate_response": "어떤 상품을 찾고 계세요?"
     },
     "note": "idle + 상품명 없이 조건만"
   },
@@ -527,7 +557,9 @@
       "quantity": 1,
       "condition": null,
       "needs_clarification": true,
-      "override_platform": null
+      "override_platform": null,
+      "clarification_reason": "상품명 없이 수량만 있음",
+      "immediate_response": "어떤 상품을 사드릴까요?"
     },
     "note": "수량 추출, 상품명 없어서 clarification"
   },
@@ -579,8 +611,12 @@
     },
     "expected_output": {
       "intent": "buy",
-      "keywords": ["CJ 두부"],
-      "exclude_keywords": ["풀무원"],
+      "keywords": [
+        "CJ 두부"
+      ],
+      "exclude_keywords": [
+        "풀무원"
+      ],
       "quantity": null,
       "condition": "최저가",
       "needs_clarification": false,
@@ -601,17 +637,19 @@
       "keywords": [],
       "exclude_keywords": [],
       "quantity": null,
-      "condition": null,
+      "condition": "신선한",
       "needs_clarification": true,
-      "override_platform": null
+      "override_platform": null,
+      "clarification_reason": "상품명 없이 조건만 있음",
+      "immediate_response": "어떤 상품을 찾고 계세요?"
     },
-    "note": "문제1: idle + 상품명 없음 → buy + clarification"
+    "note": "문제1: idle + 상품명 없음 → buy + clarification, 신선 조건은 keywords에 없어도 condition으로 추출"
   },
   {
     "id": 33,
     "category": "엣지_buy_vs_refine",
     "input": {
-      "user_input": "더 싼 걸로 바꿔줘",
+      "user_input": "유기농으로 바꿔줘",
       "stage": "product_confirming",
       "pending_action": "product_confirm"
     },
@@ -620,11 +658,11 @@
       "keywords": [],
       "exclude_keywords": [],
       "quantity": null,
-      "condition": "최저가",
+      "condition": "유기농",
       "needs_clarification": false,
       "override_platform": null
     },
-    "note": "product_confirming에서만 refine 허용"
+    "note": "product_confirming에서 최저가 외 조건 변경 → refine (조건 다양성 검증)"
   },
   {
     "id": 34,
@@ -636,7 +674,9 @@
     },
     "expected_output": {
       "intent": "buy",
-      "keywords": ["계란 10구"],
+      "keywords": [
+        "계란 10구"
+      ],
       "exclude_keywords": [],
       "quantity": 2,
       "condition": null,
@@ -655,7 +695,9 @@
     },
     "expected_output": {
       "intent": "buy",
-      "keywords": ["우유 1L"],
+      "keywords": [
+        "우유 1L"
+      ],
       "exclude_keywords": [],
       "quantity": 3,
       "condition": null,
@@ -674,7 +716,9 @@
     },
     "expected_output": {
       "intent": "buy",
-      "keywords": ["라면 5개입"],
+      "keywords": [
+        "라면 5개입"
+      ],
       "exclude_keywords": [],
       "quantity": 2,
       "condition": null,

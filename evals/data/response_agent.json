@@ -1,273 +1,227 @@
 {
-  "dataset_name": "ddalangoo-response-v1",
-  "description": "딸랑구 response_agent 노인친화도 평가셋 v1 (카테고리별 15 cases)",
+  "dataset_name": "response_testset_v1",
+  "description": "딸랑구 response_agent 노인친화도 평가셋 v1 (일반 설명 5 / Reflection 트리거 5 / QA 5 / 선호도 반영 5)",
   "version": "1",
   "evaluation_criteria": {
     "max_sentences": 3,
     "max_sentence_length": 35,
     "forbidden_words": ["플랫폼", "최저가", "가성비", "혜택", "할인율", "할인가", "프로모션"],
-    "expected_pass_rate": 1.0
+    "replacement_model": "context"
   },
   "cases": [
     {
-      "_comment": "── 식품류 (3) ──",
+      "_comment": "── 일반 설명 (5) ──",
       "input": {
-        "product": {
-          "product_name": "딸기 500g",
-          "price": 6900,
-          "platform": "naver",
-          "rating": 4.3,
-          "review_count": 850,
-          "delivery": "2-3일",
-          "product_url": "https://example.com/1"
-        },
+        "task": "explain",
+        "product": {"product_name": "딸기 500g", "price": 6900, "platform": "naver", "rating": 4.3, "review_count": 850, "delivery": "2-3일", "product_url": "https://example.com/r1"},
         "keywords": ["딸기"],
         "condition": null,
         "preference_context": {}
       },
-      "output": { "expected_elderly_pass": true }
+      "output": {"expected_elderly_pass": true}
     },
     {
       "input": {
-        "product": {
-          "product_name": "계란 30개",
-          "price": 6200,
-          "platform": "coupang",
-          "rating": 4.1,
-          "review_count": 7800,
-          "delivery": "내일 도착",
-          "product_url": "https://example.com/2"
-        },
+        "task": "explain",
+        "product": {"product_name": "계란 30개", "price": 6200, "platform": "coupang", "rating": 4.1, "review_count": 7800, "delivery": "내일 도착", "product_url": "https://example.com/r2"},
         "keywords": ["계란"],
         "condition": null,
         "preference_context": {}
       },
-      "output": { "expected_elderly_pass": true }
+      "output": {"expected_elderly_pass": true}
     },
     {
       "input": {
-        "product": {
-          "product_name": "서울우유 1L",
-          "price": 2400,
-          "platform": "coupang",
-          "rating": 4.3,
-          "review_count": 7800,
-          "delivery": "내일 도착",
-          "product_url": "https://example.com/3"
-        },
+        "task": "explain",
+        "product": {"product_name": "서울우유 1L", "price": 2400, "platform": "coupang", "rating": 4.3, "review_count": 7800, "delivery": "내일 도착", "product_url": "https://example.com/r3"},
         "keywords": ["우유"],
         "condition": null,
         "preference_context": {}
       },
-      "output": { "expected_elderly_pass": true }
-    },
-    {
-      "_comment": "── 건강식품 (3) ──",
-      "input": {
-        "product": {
-          "product_name": "종합비타민 90정",
-          "price": 24000,
-          "platform": "naver",
-          "rating": 4.5,
-          "review_count": 4200,
-          "delivery": "무료배송",
-          "product_url": "https://example.com/4"
-        },
-        "keywords": ["비타민"],
-        "condition": "무료배송",
-        "preference_context": {}
-      },
-      "output": { "expected_elderly_pass": true }
+      "output": {"expected_elderly_pass": true}
     },
     {
       "input": {
-        "product": {
-          "product_name": "유산균 60캡슐",
-          "price": 32000,
-          "platform": "kurly",
-          "rating": 4.6,
-          "review_count": 1900,
-          "delivery": "내일 아침",
-          "product_url": "https://example.com/5"
-        },
-        "keywords": ["유산균"],
+        "task": "explain",
+        "product": {"product_name": "풀무원 국산콩 두부 300g", "price": 2490, "platform": "kurly", "rating": 4.7, "review_count": 1820, "delivery": "새벽배송", "product_url": "https://example.com/r4"},
+        "keywords": ["두부"],
         "condition": null,
         "preference_context": {}
       },
-      "output": { "expected_elderly_pass": true }
+      "output": {"expected_elderly_pass": true}
     },
     {
       "input": {
-        "product": {
-          "product_name": "오메가3 90캡슐",
-          "price": 28000,
-          "platform": "naver",
-          "rating": 4.4,
-          "review_count": 3100,
-          "delivery": "2-3일",
-          "product_url": "https://example.com/6"
-        },
-        "keywords": ["오메가3"],
-        "condition": "인기순",
-        "preference_context": {}
-      },
-      "output": { "expected_elderly_pass": true }
-    },
-    {
-      "_comment": "── 생활용품 (3) ──",
-      "input": {
-        "product": {
-          "product_name": "울트라 세탁세제 3kg",
-          "price": 12800,
-          "platform": "coupang",
-          "rating": 4.4,
-          "review_count": 3200,
-          "delivery": "내일 아침",
-          "product_url": "https://example.com/7"
-        },
-        "keywords": ["세탁세제"],
-        "condition": "빠른배송",
-        "preference_context": {}
-      },
-      "output": { "expected_elderly_pass": true }
-    },
-    {
-      "input": {
-        "product": {
-          "product_name": "KF94 마스크 10매",
-          "price": 8900,
-          "platform": "naver",
-          "rating": 4.5,
-          "review_count": 2100,
-          "delivery": "2-3일",
-          "product_url": "https://example.com/8"
-        },
-        "keywords": ["마스크"],
-        "condition": null,
-        "preference_context": {}
-      },
-      "output": { "expected_elderly_pass": true }
-    },
-    {
-      "input": {
-        "product": {
-          "product_name": "부드러운 칫솔 4개입",
-          "price": 4500,
-          "platform": "coupang",
-          "rating": 4.3,
-          "review_count": 5600,
-          "delivery": "내일 도착",
-          "product_url": "https://example.com/9"
-        },
-        "keywords": ["칫솔"],
-        "condition": null,
-        "preference_context": {}
-      },
-      "output": { "expected_elderly_pass": true }
-    },
-    {
-      "_comment": "── 식재료 (3) ──",
-      "input": {
-        "product": {
-          "product_name": "참기름 330ml",
-          "price": 12000,
-          "platform": "coupang",
-          "rating": 4.7,
-          "review_count": 1850,
-          "delivery": "내일 도착",
-          "product_url": "https://example.com/10"
-        },
-        "keywords": ["참기름"],
-        "condition": "리뷰좋은",
-        "preference_context": {}
-      },
-      "output": { "expected_elderly_pass": true }
-    },
-    {
-      "input": {
-        "product": {
-          "product_name": "아오리 사과 2kg",
-          "price": 19500,
-          "platform": "kurly",
-          "rating": 4.6,
-          "review_count": 5000,
-          "delivery": "내일 아침",
-          "product_url": "https://example.com/11"
-        },
+        "task": "explain",
+        "product": {"product_name": "GAP 인증 홍로 사과 1.5kg", "price": 9900, "platform": "naver", "rating": 4.7, "review_count": 2300, "delivery": "내일 도착", "product_url": "https://example.com/r5"},
         "keywords": ["사과"],
-        "condition": "인기순",
-        "preference_context": {}
-      },
-      "output": { "expected_elderly_pass": true }
-    },
-    {
-      "input": {
-        "product": {
-          "product_name": "국내산 현미 5kg",
-          "price": 22000,
-          "platform": "naver",
-          "rating": 4.5,
-          "review_count": 2300,
-          "delivery": "2-3일",
-          "product_url": "https://example.com/12"
-        },
-        "keywords": ["현미"],
         "condition": null,
         "preference_context": {}
       },
-      "output": { "expected_elderly_pass": true }
+      "output": {"expected_elderly_pass": true}
     },
     {
-      "_comment": "── 의류/잡화 (3) ──",
+      "_comment": "── Reflection 트리거 (5) ──",
       "input": {
-        "product": {
-          "product_name": "기본 운동화",
-          "price": 35000,
-          "platform": "coupang",
-          "rating": 4.0,
-          "review_count": 320,
-          "delivery": "내일 도착",
-          "product_url": "https://example.com/13"
-        },
+        "task": "explain",
+        "product": {"product_name": "기본 운동화", "price": 35000, "platform": "coupang", "rating": 4.0, "review_count": 320, "delivery": "내일 도착", "product_url": "https://example.com/r6"},
         "keywords": ["운동화"],
         "condition": "최저가",
-        "preference_context": {}
+        "preference_context": {},
+        "trigger_note": "condition 단어를 설명에 넣으면 Reflection이 잡아야 한다."
       },
-      "output": { "expected_elderly_pass": true }
+      "output": {"expected_elderly_pass": true, "expected_reflection_sensitive": true}
     },
     {
       "input": {
-        "product": {
-          "product_name": "방풍 점퍼 M",
-          "price": 58000,
-          "platform": "naver",
-          "rating": 4.4,
-          "review_count": 780,
-          "delivery": "3-4일",
-          "product_url": "https://example.com/14"
-        },
+        "task": "explain",
+        "product": {"product_name": "종합비타민 90정", "price": 24000, "platform": "naver", "rating": 4.5, "review_count": 4200, "delivery": "무료배송", "product_url": "https://example.com/r7"},
+        "keywords": ["비타민"],
+        "condition": "무료배송",
+        "preference_context": {},
+        "trigger_note": "혜택/프로모션 같은 단어를 피해야 한다."
+      },
+      "output": {"expected_elderly_pass": true, "expected_reflection_sensitive": true}
+    },
+    {
+      "input": {
+        "task": "explain",
+        "product": {"product_name": "프리미엄 딸기 1kg", "price": 24000, "platform": "naver", "rating": 4.9, "review_count": 310, "delivery": "2일 후 도착", "product_url": "https://example.com/r8"},
+        "keywords": ["딸기"],
+        "condition": "리뷰좋은",
+        "preference_context": {},
+        "trigger_note": "긴 미사여구 없이 짧게 설명해야 한다."
+      },
+      "output": {"expected_elderly_pass": true, "expected_reflection_sensitive": true}
+    },
+    {
+      "input": {
+        "task": "explain",
+        "product": {"product_name": "참들이향 참기름 500ml", "price": 17500, "platform": "naver", "rating": 4.8, "review_count": 540, "delivery": "내일 도착", "product_url": "https://example.com/r9"},
+        "keywords": ["참기름"],
+        "condition": "가성비",
+        "preference_context": {},
+        "trigger_note": "가성비 같은 금지어를 쉬운 말로 바꿔야 한다."
+      },
+      "output": {"expected_elderly_pass": true, "expected_reflection_sensitive": true}
+    },
+    {
+      "input": {
+        "task": "explain",
+        "product": {"product_name": "방풍 점퍼 M", "price": 58000, "platform": "naver", "rating": 4.4, "review_count": 780, "delivery": "3-4일", "product_url": "https://example.com/r10"},
         "keywords": ["점퍼"],
         "condition": null,
-        "preference_context": {}
+        "preference_context": {},
+        "trigger_note": "문장 길이가 길어지면 Reflection이 잡아야 한다."
       },
-      "output": { "expected_elderly_pass": true }
+      "output": {"expected_elderly_pass": true, "expected_reflection_sensitive": true}
     },
     {
+      "_comment": "── QA (5) ──",
       "input": {
-        "product": {
-          "product_name": "자외선 차단 모자",
-          "price": 18000,
-          "platform": "coupang",
-          "rating": 4.3,
-          "review_count": 1400,
-          "delivery": "내일 도착",
-          "product_url": "https://example.com/15"
-        },
-        "keywords": ["모자"],
+        "task": "qa",
+        "question": "언제 와?",
+        "product": {"product_name": "동물복지 계란 15구", "price": 7200, "platform": "kurly", "rating": 4.8, "review_count": 1900, "delivery": "새벽배송", "product_url": "https://example.com/r11"},
+        "keywords": ["계란"],
         "condition": null,
         "preference_context": {}
       },
-      "output": { "expected_elderly_pass": true }
+      "output": {"expected_elderly_pass": true, "expected_terms": ["새벽배송"]}
+    },
+    {
+      "input": {
+        "task": "qa",
+        "question": "가격이 얼마야?",
+        "product": {"product_name": "서울우유 1L", "price": 2800, "platform": "coupang", "rating": 4.5, "review_count": 5100, "delivery": "로켓배송", "product_url": "https://example.com/r12"},
+        "keywords": ["우유"],
+        "condition": null,
+        "preference_context": {}
+      },
+      "output": {"expected_elderly_pass": true, "expected_terms": ["2800"]}
+    },
+    {
+      "input": {
+        "task": "qa",
+        "question": "리뷰가 많아?",
+        "product": {"product_name": "나이키 운동화", "price": 89000, "platform": "naver", "rating": 4.8, "review_count": 5200, "delivery": "2-3일", "product_url": "https://example.com/r13"},
+        "keywords": ["운동화"],
+        "condition": null,
+        "preference_context": {}
+      },
+      "output": {"expected_elderly_pass": true, "expected_terms": ["5200"]}
+    },
+    {
+      "input": {
+        "task": "qa",
+        "question": "상품 정보가 충분해?",
+        "product": {"product_name": "상품명 미상", "price": null, "platform": "naver", "product_url": "https://example.com/r14"},
+        "keywords": ["상품"],
+        "condition": null,
+        "preference_context": {}
+      },
+      "output": {"expected_elderly_pass": true}
+    },
+    {
+      "input": {
+        "task": "qa",
+        "question": "어느 쇼핑몰이야?",
+        "product": {"product_name": "컬리 국산 참기름 200ml", "price": 13800, "platform": "kurly", "rating": 4.7, "review_count": 329, "delivery": "새벽배송", "product_url": "https://example.com/r15"},
+        "keywords": ["참기름"],
+        "condition": null,
+        "preference_context": {}
+      },
+      "output": {"expected_elderly_pass": true, "expected_terms": ["컬리"]}
+    },
+    {
+      "_comment": "── 선호도 반영 (5) ──",
+      "input": {
+        "task": "explain",
+        "product": {"product_name": "동물복지 계란 15구", "price": 7200, "platform": "kurly", "rating": 4.8, "review_count": 1900, "delivery": "새벽배송", "product_url": "https://example.com/r16"},
+        "keywords": ["계란"],
+        "condition": null,
+        "preference_context": {"summary": "컬리 새벽배송과 동물복지 계란을 반복 구매합니다.", "keyword_summary": "계란 구매 이력이 많습니다."}
+      },
+      "output": {"expected_elderly_pass": true, "expected_preference_used": true, "expected_preference_terms": ["컬리", "동물복지"]}
+    },
+    {
+      "input": {
+        "task": "explain",
+        "product": {"product_name": "풀무원 국산콩 두부 300g", "price": 2490, "platform": "kurly", "rating": 4.7, "review_count": 1820, "delivery": "새벽배송", "product_url": "https://example.com/r17"},
+        "keywords": ["두부"],
+        "condition": null,
+        "preference_context": {"summary": "풀무원 두부를 자주 구매합니다.", "keyword_summary": "두부 구매 이력이 있습니다."}
+      },
+      "output": {"expected_elderly_pass": true, "expected_preference_used": true, "expected_preference_terms": ["풀무원"]}
+    },
+    {
+      "input": {
+        "task": "explain",
+        "product": {"product_name": "BerryFarm 생딸기 500g", "price": 10900, "platform": "naver", "rating": 4.6, "review_count": 900, "delivery": "내일 도착", "product_url": "https://example.com/r18"},
+        "keywords": ["딸기"],
+        "condition": null,
+        "preference_context": {"summary": "BerryFarm 딸기 구매 이력이 있습니다.", "keyword_summary": "딸기를 여러 번 구매했습니다."}
+      },
+      "output": {"expected_elderly_pass": true, "expected_preference_used": true, "expected_preference_terms": ["BerryFarm"]}
+    },
+    {
+      "input": {
+        "task": "explain",
+        "product": {"product_name": "CJ 국산 참기름 300ml", "price": 8200, "platform": "naver", "rating": 4.6, "review_count": 900, "delivery": "내일 도착", "product_url": "https://example.com/r19"},
+        "keywords": ["참기름"],
+        "condition": null,
+        "preference_context": {"summary": "CJ 참기름을 네이버에서 만족 구매했습니다.", "keyword_summary": "참기름 구매 이력이 있습니다."}
+      },
+      "output": {"expected_elderly_pass": true, "expected_preference_used": true, "expected_preference_terms": ["CJ"]}
+    },
+    {
+      "input": {
+        "task": "explain",
+        "product": {"product_name": "산지직송 꿀사과 2kg", "price": 14500, "platform": "kurly", "rating": 4.6, "review_count": 870, "delivery": "새벽배송", "product_url": "https://example.com/r20"},
+        "keywords": ["사과"],
+        "condition": null,
+        "preference_context": {"summary": "컬리 신선식품과 새벽배송을 자주 이용합니다.", "keyword_summary": "과일 구매 이력이 있습니다."}
+      },
+      "output": {"expected_elderly_pass": true, "expected_preference_used": true, "expected_preference_terms": ["컬리"]}
     }
   ]
 }

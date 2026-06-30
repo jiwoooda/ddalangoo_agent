@@ -14,9 +14,22 @@ def wait_for_input_node(state: ShoppingState) -> dict:
 def respond_node(state: ShoppingState) -> dict:
     """사용자에게 보낼 메시지 생성."""
     stage = state.get("stage", "idle")
+    intent = state.get("intent")
     immediate = state.get("immediate_response")
     explanation = state.get("explanation")
     pending_action = state.get("pending_action") or {}
+
+    # idle에서 배송지 confirm/deny — pending_action 클리어 후 단답 응답
+    # (응답 agent가 방금 address_confirm을 세팅한 경우(intent=ask)는 통과시켜 그냥 표시)
+    if pending_action.get("type") == "address_confirm" and stage != "payment_processing":
+        if intent == "confirm":
+            msg = immediate or "네, 알겠어요!"
+            agent_logger.log_respond(msg, stage, pending_action)
+            return {"messages": [{"role": "assistant", "content": msg}], "pending_action": None}
+        elif intent in ("deny", "address_change"):
+            msg = immediate or "그럼 새 배송지를 말씀해 주세요."
+            agent_logger.log_respond(msg, stage, pending_action)
+            return {"messages": [{"role": "assistant", "content": msg}], "pending_action": None}
 
     if state.get("needs_clarification"):
         msg = immediate or state.get("clarification_reason") or "다시 한번 말씀해 주세요."

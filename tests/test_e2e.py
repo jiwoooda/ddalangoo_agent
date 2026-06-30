@@ -244,7 +244,37 @@ def test_cancel_mid_flow():
     print("\n  [✓] 취소 흐름 통과")
 
 
-# ── 시나리오 5: 조건 검색 ──────────────────────────────────────────────
+# ── 시나리오 5: 배송지 확인 흐름 ──────────────────────────────────────
+
+def test_address_check_flow():
+    """배송지 확인 → 맞아 → 종료 (무한 반복 없이)."""
+    results = run_scenario(
+        title="배송지 확인 흐름",
+        user_id="1",
+        turns=[
+            ("배송지를 확인해주세요", "idle"),   # 1: 주소 표시 + address_confirm
+            ("맞아",                 "idle"),   # 2: confirm → "네, 알겠어요!" + pending_action 클리어
+        ],
+    )
+    assert len(results) >= 2, "2턴까지 도달하지 못함"
+
+    turn1 = results[0]
+    assert turn1.pending_type == "address_confirm", (
+        f"Turn 1 pending_type 기대=address_confirm, 실제={turn1.pending_type}"
+    )
+    assert "배송지" in results[0].response or "주소" in results[0].response or "테헤란" in results[0].response, (
+        f"Turn 1 응답에 배송지 정보 없음: {results[0].response}"
+    )
+
+    turn2 = results[1]
+    assert turn2.pending_type != "address_confirm", (
+        f"Turn 2에서 address_confirm이 클리어되지 않음 (무한반복 버그)"
+    )
+    print(f"\n  Turn 2 응답: {turn2.response}")
+    print("\n  [✓] 배송지 확인 흐름 통과")
+
+
+# ── 시나리오 6: 조건 검색 ──────────────────────────────────────────────
 
 def test_condition_search():
     """최저가 조건 검색 + 가성비로 refine."""
@@ -263,10 +293,11 @@ def test_condition_search():
 # ── 실행 진입점 ────────────────────────────────────────────────────────
 
 _SCENARIOS = {
-    "buy":    test_buy_full_flow,
-    "reorder": test_reorder_flow,
+    "buy":      test_buy_full_flow,
+    "reorder":  test_reorder_flow,
     "next_ask": test_next_and_ask,
-    "cancel": test_cancel_mid_flow,
+    "cancel":   test_cancel_mid_flow,
+    "address":  test_address_check_flow,
     "condition": test_condition_search,
 }
 

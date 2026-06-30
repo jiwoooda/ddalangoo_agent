@@ -176,6 +176,15 @@ def _rank(
     condition: str | None,
     preference_context: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    return _rank_with_metadata(candidates, keywords, condition, preference_context)["ranked_products"]
+
+
+def _rank_with_metadata(
+    candidates: list[dict[str, Any]],
+    keywords: list[str],
+    condition: str | None,
+    preference_context: dict[str, Any],
+) -> dict[str, Any]:
     rank_tool = _make_rank_tool(candidates)
     rank_response = _get_llm().bind_tools([rank_tool]).invoke([
         HumanMessage(content=PRODUCT_RANK_PROMPT.format(
@@ -190,10 +199,23 @@ def _rank(
         try:
             result = json.loads(rank_tool.invoke(tc["args"]))
             if result:
-                return result
+                return {
+                    "ranked_products": result,
+                    "tool_call_success": True,
+                    "tool_call_error": None,
+                }
         except Exception as e:
             agent_logger.log(f"[product_agent] rank_tool 실패: {e}")
-    return candidates
+            return {
+                "ranked_products": candidates,
+                "tool_call_success": False,
+                "tool_call_error": str(e),
+            }
+    return {
+        "ranked_products": candidates,
+        "tool_call_success": False,
+        "tool_call_error": "no_tool_call",
+    }
 
 
 def product_agent_node(state: ShoppingState) -> dict:

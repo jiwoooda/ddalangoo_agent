@@ -8,6 +8,7 @@ LangSmith Dataset 관리.
   python -m evals.dataset --agent intent          # 단일 에이전트 업로드
   python -m evals.dataset --agent product
   python -m evals.dataset --agent response
+  python -m evals.dataset --agent context
   python -m evals.dataset --all                   # 전체 업로드
   python -m evals.dataset --agent intent --dry-run  # 로컬 출력만
 """
@@ -18,6 +19,9 @@ import json
 import sys
 from pathlib import Path
 from typing import Any
+from dotenv import load_dotenv
+
+load_dotenv()
 
 _DATA_DIR = Path(__file__).parent / "data"
 
@@ -26,6 +30,7 @@ _AGENT_FILES: dict[str, Path] = {
     "intent":   _DATA_DIR / "intent_agent.json",
     "product":  _DATA_DIR / "product_agent.json",
     "response": _DATA_DIR / "response_agent.json",
+    "context":  _DATA_DIR / "context_agent.json",
 }
 
 AGENTS = list(_AGENT_FILES.keys())
@@ -39,7 +44,7 @@ def _load_json(agent: str) -> dict[str, Any]:
     # 배열 형식(flat list) → 래퍼 형식으로 정규화
     if isinstance(raw, list):
         return {
-            "dataset_name": f"ddalangoo-{agent}-v1",
+            "dataset_name": f"{agent}_testset_v1",
             "description": f"딸랑구 {agent} 평가셋",
             "cases": raw,
         }
@@ -67,7 +72,7 @@ def get_dataset_description(agent: str) -> str:
 
 # ── LangSmith 업로드 ─────────────────────────────────────────────────────
 
-def upload_dataset(agent: str) -> None:
+def upload_dataset(agent: str, force: bool = False) -> None:
     from langsmith import Client
 
     data = _load_json(agent)
@@ -85,9 +90,12 @@ def upload_dataset(agent: str) -> None:
     client = Client()
     existing = [d for d in client.list_datasets() if d.name == dataset_name]
     if existing:
-        print(f"[{agent}] 이미 존재: '{dataset_name}' (id={existing[0].id})")
-        print(f"  → 덮어쓰려면 LangSmith UI에서 삭제 후 재실행하세요.")
-        return
+        if not force:
+            print(f"[{agent}] 이미 존재: '{dataset_name}' (id={existing[0].id})")
+            print(f"  → 덮어쓰려면 --force 옵션을 사용하세요.")
+            return
+        client.delete_dataset(dataset_id=existing[0].id)
+        print(f"[{agent}] 기존 삭제: '{dataset_name}' (id={existing[0].id})")
 
     dataset = client.create_dataset(
         dataset_name=dataset_name,
@@ -101,9 +109,9 @@ def upload_dataset(agent: str) -> None:
     print(f"[{agent}] 업로드 완료: {len(clean_cases)}개 → '{dataset_name}' (id={dataset.id})")
 
 
-def upload_all() -> None:
+def upload_all(force: bool = False) -> None:
     for agent in AGENTS:
-        upload_dataset(agent)
+        upload_dataset(agent, force=force)
 
 
 # ── 드라이런 ─────────────────────────────────────────────────────────────
@@ -132,17 +140,17 @@ def dry_run(agent: str) -> None:
                 print(f"  [{cat}] {count}개")
 
     elif agent == "product":
-        conditions = [c["input"].get("condition", "?") for c in cases]
+        conditions = [c["input"].get("condition") or "없음" for c in cases]
         for cond, count in sorted(Counter(conditions).items()):
             print(f"  {cond:<20} {count}개")
 
     elif agent == "response":
-        categories = []
-        for c in cases:
-            comment = c.get("_comment", "")
-            if comment:
-                categories.append(comment.strip("─ ()"))
         print(f"  샘플 입력 상품: {cases[0]['input']['product']['product_name']}")
+
+    elif agent == "context":
+        buckets = [c["input"].get("scenario", "?") for c in cases]
+        for bucket, count in sorted(Counter(buckets).items()):
+            print(f"  {bucket:<20} {count}개")
 
     print()
     print("샘플 케이스:")
@@ -159,10 +167,11 @@ def main() -> None:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
         "--agent", choices=AGENTS,
-        help="업로드할 에이전트 (intent | product | response)",
+        help="업로드할 에이전트 (intent | product | response | context)",
     )
     group.add_argument("--all", action="store_true", help="전체 에이전트 업로드")
     parser.add_argument("--dry-run", action="store_true", help="업로드 없이 로컬 출력만")
+    parser.add_argument("--force", action="store_true", help="기존 데이터셋 삭제 후 재업로드")
     args = parser.parse_args()
 
     if args.dry_run:
@@ -170,9 +179,9 @@ def main() -> None:
         for agent in targets:
             dry_run(agent)
     elif args.all:
-        upload_all()
+        upload_all(force=args.force)
     else:
-        upload_dataset(args.agent)
+        upload_dataset(args.agent, force=args.force)
 
 
 if __name__ == "__main__":

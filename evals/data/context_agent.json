@@ -1,0 +1,128 @@
+{
+  "dataset_name": "context_testset_v1",
+  "description": "딸랑구 context_agent 선호 요약 평가셋 v2 — 구조화 필드 항목별 검증 포함",
+  "version": "2",
+  "cases": [
+
+    {
+      "_comment": "── rich_history (4) — user_id=1 전체 구매이력 기반 ──",
+      "input": {"scenario": "rich_history", "user_id": "1", "keywords": ["달걀"], "intent": "buy"},
+      "output": {
+        "expected_nonempty": true,
+        "expected_preferred_brands": ["컬리", "BerryFarm"],
+        "expected_preferred_platform": "kurly",
+        "expected_price_range": {"min": 2490, "max": 18000, "avg": 6819},
+        "expected_repurchase_patterns": ["[조인] 동물복지 백색 유정 초란 10구"],
+        "expected_keyword_history_min": 5,
+        "expected_keyword_history_products": ["[조인] 동물복지 백색 유정 초란 10구"],
+        "expected_terms": ["컬리", "달걀", "재구매"],
+        "faithfulness_source": "mock_db.purchase_history.1"
+      }
+    },
+
+    {
+      "input": {"scenario": "rich_history", "user_id": "1", "keywords": ["두부"], "intent": "buy"},
+      "output": {
+        "expected_nonempty": true,
+        "expected_preferred_brands": ["컬리", "풀무원"],
+        "expected_preferred_platform": "kurly",
+        "expected_price_range": {"min": 2490, "max": 18000, "avg": 6819},
+        "expected_repurchase_patterns": ["[조인] 동물복지 백색 유정 초란 10구"],
+        "expected_keyword_history_min": 1,
+        "expected_keyword_history_products": ["풀무원 국산콩 두부 (부침) 300g"],
+        "expected_terms": ["풀무원", "두부", "컬리"],
+        "faithfulness_source": "mock_db.purchase_history.1"
+      }
+    },
+
+    {
+      "input": {"scenario": "rich_history", "user_id": "1", "keywords": ["딸기"], "intent": "buy"},
+      "output": {
+        "expected_nonempty": true,
+        "expected_preferred_brands": ["컬리", "BerryFarm"],
+        "expected_preferred_platform": "kurly",
+        "expected_price_range": {"min": 2490, "max": 18000, "avg": 6819},
+        "expected_repurchase_patterns": ["[조인] 동물복지 백색 유정 초란 10구"],
+        "expected_keyword_history_min": 1,
+        "expected_keyword_history_products": ["설향 딸기 500g"],
+        "expected_terms": ["BerryFarm", "딸기"],
+        "faithfulness_source": "mock_db.purchase_history.1"
+      }
+    },
+
+    {
+      "input": {"scenario": "rich_history", "user_id": "1", "keywords": ["참기름"], "intent": "buy"},
+      "output": {
+        "expected_nonempty": true,
+        "expected_preferred_brands": ["컬리"],
+        "expected_preferred_platform": "kurly",
+        "expected_price_range": {"min": 2490, "max": 18000, "avg": 6819},
+        "expected_repurchase_patterns": ["[조인] 동물복지 백색 유정 초란 10구"],
+        "expected_keyword_history_min": 1,
+        "expected_keyword_history_products": ["국산 참기름 300ml"],
+        "expected_terms": ["CJ", "참기름", "8000"],
+        "faithfulness_source": "mock_db.purchase_history.1"
+      }
+    },
+
+    {
+      "_comment": "── cold_start (3) — 구매이력 없음 → preference_context 비어야 함 ──",
+      "input": {"scenario": "cold_start", "user_id": "user_test", "keywords": ["사과"], "intent": "buy"},
+      "output": {
+        "expected_nonempty": false,
+        "expected_cold_start": true,
+        "faithfulness_source": null
+      }
+    },
+
+    {
+      "input": {"scenario": "cold_start", "user_id": "new_user", "keywords": ["우유"], "intent": "buy"},
+      "output": {
+        "expected_nonempty": false,
+        "expected_cold_start": true,
+        "faithfulness_source": null
+      }
+    },
+
+    {
+      "input": {"scenario": "cold_start", "user_id": "user_test", "keywords": [], "intent": "buy"},
+      "output": {
+        "expected_nonempty": false,
+        "expected_cold_start": true,
+        "faithfulness_source": null
+      }
+    },
+
+    {
+      "_comment": "── keyword_match (3) — keyword_history 채워졌는지 항목별 확인 ──",
+      "input": {"scenario": "keyword_match", "user_id": "1", "keywords": ["달걀"], "intent": "buy"},
+      "output": {
+        "expected_keyword_history_min": 5,
+        "expected_keyword_history_products": ["[조인] 동물복지 백색 유정 초란 10구"],
+        "expected_terms": ["동물복지", "초란", "컬리"],
+        "faithfulness_source": "mock_db.purchase_history.1"
+      }
+    },
+
+    {
+      "input": {"scenario": "keyword_match", "user_id": "1", "keywords": ["두부"], "intent": "buy"},
+      "output": {
+        "expected_keyword_history_min": 1,
+        "expected_keyword_history_products": ["풀무원 국산콩 두부 (부침) 300g"],
+        "expected_terms": ["풀무원", "국산콩", "두부"],
+        "faithfulness_source": "mock_db.purchase_history.1"
+      }
+    },
+
+    {
+      "input": {"scenario": "keyword_match", "user_id": "1", "keywords": ["딸기"], "intent": "buy"},
+      "output": {
+        "expected_keyword_history_min": 1,
+        "expected_keyword_history_products": ["설향 딸기 500g"],
+        "expected_terms": ["설향", "딸기"],
+        "faithfulness_source": "mock_db.purchase_history.1"
+      }
+    }
+
+  ]
+}

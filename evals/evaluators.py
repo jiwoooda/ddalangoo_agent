@@ -9,6 +9,8 @@ evaluator 시그니처: (outputs: dict, reference_outputs: dict) -> dict
   {"key": "metric_name", "score": 0.0~1.0, "comment": "..."}
 """
 from __future__ import annotations
+import math
+import re
 
 # ── 어르신 친화도 기준 (response_agent와 동일) ──────────────────────────
 _ELDERLY_FORBIDDEN = ["플랫폼", "최저가", "가성비", "혜택", "할인율", "할인가", "프로모션"]
@@ -77,6 +79,16 @@ def needs_clarification_evaluator(outputs: dict, reference_outputs: dict) -> dic
         "key": "needs_clarification_accuracy",
         "score": score,
         "comment": f"predicted={predicted}, expected={expected}",
+    }
+
+
+def schema_compliance_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    """Pydantic structured output 성공 여부. predict 예외 시 _schema_ok=false."""
+    ok = not (outputs or {}).get("_error") and (outputs or {}).get("_schema_ok", True)
+    return {
+        "key": "schema_compliance",
+        "score": 1.0 if ok else 0.0,
+        "comment": (outputs or {}).get("_error", "통과"),
     }
 
 
@@ -152,6 +164,69 @@ def product_ranking_evaluator(outputs: dict, reference_outputs: dict) -> dict:
     return {"key": "ranking_accuracy", "score": 1.0, "comment": "기준 없음 — top_product 존재"}
 
 
+def tool_call_success_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    ok = bool((outputs or {}).get("tool_call_success"))
+    return {
+        "key": "tool_call_success_rate",
+        "score": 1.0 if ok else 0.0,
+        "comment": (outputs or {}).get("tool_call_error") or ("통과" if ok else "tool call 실패"),
+    }
+
+
+def mrr_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    expected = (reference_outputs or {}).get("expected_top_product")
+    ranked = (outputs or {}).get("ranked_products") or []
+    if not expected or not ranked:
+        return {"key": "mrr", "score": 0.0, "comment": "expected 또는 ranked 없음"}
+    for idx, product in enumerate(ranked, start=1):
+        if product.get("product_name") == expected:
+            return {"key": "mrr", "score": round(1.0 / idx, 3), "comment": f"rank={idx}"}
+    return {"key": "mrr", "score": 0.0, "comment": "정답 상품 없음"}
+
+
+def ndcg_at_3_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    ref = reference_outputs or {}
+    relevant = ref.get("expected_ranking") or ref.get("relevant_products") or []
+    ranked = (outputs or {}).get("ranked_products") or []
+    if not relevant or not ranked:
+        return {"key": "ndcg_at_3", "score": None, "comment": "expected_ranking 없음"}
+    rel_map = {name: max(len(relevant) - i, 1) for i, name in enumerate(relevant)}
+    gains = []
+    for idx, product in enumerate(ranked[:3], start=1):
+        rel = rel_map.get(product.get("product_name"), 0)
+        gains.append((2**rel - 1) / math.log2(idx + 1))
+    ideal_rels = sorted(rel_map.values(), reverse=True)[:3]
+    ideal = sum((2**rel - 1) / math.log2(idx + 1) for idx, rel in enumerate(ideal_rels, start=1))
+    score = sum(gains) / ideal if ideal else 0.0
+    return {"key": "ndcg_at_3", "score": round(score, 3), "comment": f"expected={relevant[:3]}"}
+
+
+def condition_adherence_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    rule = (reference_outputs or {}).get("condition_rule")
+    top = (outputs or {}).get("top_product")
+    ranked = (outputs or {}).get("ranked_products") or []
+    if not rule or not top or not ranked:
+        return {"key": "condition_adherence", "score": None}
+
+    if rule == "price_lowest":
+        best = min(ranked, key=lambda p: p.get("price") or 999_999_999)
+        ok = top.get("product_name") == best.get("product_name")
+    elif rule == "review_count_highest":
+        best = max(ranked, key=lambda p: p.get("review_count") or 0)
+        ok = top.get("product_name") == best.get("product_name")
+    elif rule == "rating_highest":
+        best = max(ranked, key=lambda p: p.get("rating") or 0)
+        ok = top.get("product_name") == best.get("product_name")
+    elif rule == "free_shipping":
+        ok = top.get("delivery_fee") == 0 or "무료" in str(top.get("delivery") or "")
+    elif rule == "delivery_fastest":
+        ok = any(k in str(top.get("delivery") or "") for k in ("오늘", "내일", "새벽", "로켓"))
+    else:
+        return {"key": "condition_adherence", "score": None, "comment": f"unknown rule={rule}"}
+
+    return {"key": "condition_adherence", "score": 1.0 if ok else 0.0, "comment": rule}
+
+
 # ── response_agent 평가기 ────────────────────────────────────────────────
 
 def elderly_friendliness_evaluator(outputs: dict, reference_outputs: dict) -> dict:
@@ -168,8 +243,235 @@ def elderly_friendliness_evaluator(outputs: dict, reference_outputs: dict) -> di
     }
 
 
+def reflection_pass_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    if "reflection_passed" in (outputs or {}):
+        ok = bool(outputs["reflection_passed"])
+    else:
+        ok, _ = _check_elderly_friendly((outputs or {}).get("explanation", ""))
+    return {"key": "reflection_pass_rate", "score": 1.0 if ok else 0.0}
+
+
+def haiku_fallback_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    used = bool((outputs or {}).get("haiku_fallback"))
+    return {"key": "haiku_fallback_rate", "score": 1.0 if used else 0.0}
+
+
+def g_eval_elderly_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    """G-Eval 대체 로컬 루브릭. DeepEval judge 연결 전에도 추세 확인 가능."""
+    text = (outputs or {}).get("explanation", "")
+    if not text:
+        return {"key": "g_eval_elderly", "score": 0.0, "comment": "explanation 없음"}
+    ok, reason = _check_elderly_friendly(text)
+    has_price = bool(re.search(r"\d", text))
+    score_5 = 5
+    if not ok:
+        score_5 -= 2
+    if not has_price:
+        score_5 -= 1
+    score_5 = max(1, min(5, score_5))
+    return {
+        "key": "g_eval_elderly",
+        "score": score_5 / 5,
+        "comment": f"{score_5}/5; {reason or '짧고 쉬움'}",
+    }
+
+
+def preference_adherence_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    """선호도 반영 여부: expected_preference_terms 중 explanation에 포함된 비율."""
+    hints = (reference_outputs or {}).get("expected_preference_terms")
+    if not hints:
+        return {"key": "preference_adherence", "score": None}
+    text = (outputs or {}).get("explanation", "")
+    hits = sum(1 for h in hints if h in text)
+    return {
+        "key": "preference_adherence",
+        "score": round(hits / len(hints), 3),
+        "comment": f"{hits}/{len(hints)} 반영",
+    }
+
+
+def latency_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    latency_ms = (outputs or {}).get("latency_ms")
+    if latency_ms is None:
+        return {"key": "latency_ms", "score": None}
+    return {"key": "latency_ms", "score": float(latency_ms), "comment": f"{latency_ms:.1f}ms"}
+
+
+def ttft_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    ttft_ms = (outputs or {}).get("ttft_ms", (outputs or {}).get("latency_ms"))
+    if ttft_ms is None:
+        return {"key": "ttft_ms", "score": None}
+    return {"key": "ttft_ms", "score": float(ttft_ms), "comment": f"{ttft_ms:.1f}ms"}
+
+
+# ── context_agent 평가기 ────────────────────────────────────────────────
+
+def preferred_brands_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    """expected_preferred_brands가 preferred_brands[].brand 목록에 모두 포함되는지 확인."""
+    expected = (reference_outputs or {}).get("expected_preferred_brands")
+    if not expected:
+        return {"key": "preferred_brands", "score": None}
+    actual_brands = {b.get("brand") for b in ((outputs or {}).get("preferred_brands") or [])}
+    hits = [b for b in expected if b in actual_brands]
+    score = len(hits) / len(expected)
+    return {
+        "key": "preferred_brands",
+        "score": round(score, 3),
+        "comment": f"found={hits}, missing={[b for b in expected if b not in actual_brands]}",
+    }
+
+
+def preferred_platform_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    """preferred_platform이 expected_preferred_platform과 일치하는지 확인."""
+    expected = (reference_outputs or {}).get("expected_preferred_platform")
+    if not expected:
+        return {"key": "preferred_platform", "score": None}
+    actual = (outputs or {}).get("preferred_platform")
+    ok = actual == expected
+    return {
+        "key": "preferred_platform",
+        "score": 1.0 if ok else 0.0,
+        "comment": f"actual={actual!r}, expected={expected!r}",
+    }
+
+
+def price_range_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    """price_range의 min/max/avg가 expected_price_range와 일치하는지 확인."""
+    expected = (reference_outputs or {}).get("expected_price_range")
+    if not expected:
+        return {"key": "price_range", "score": None}
+    actual = (outputs or {}).get("price_range") or {}
+    checks = []
+    for field in ("min", "max", "avg"):
+        if field in expected:
+            checks.append(actual.get(field) == expected[field])
+    if not checks:
+        return {"key": "price_range", "score": None}
+    score = sum(checks) / len(checks)
+    return {
+        "key": "price_range",
+        "score": round(score, 3),
+        "comment": f"actual={actual}, expected={expected}",
+    }
+
+
+def repurchase_patterns_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    """expected_repurchase_patterns 항목이 repurchase_patterns에 포함되는지 확인."""
+    expected = (reference_outputs or {}).get("expected_repurchase_patterns")
+    if not expected:
+        return {"key": "repurchase_patterns", "score": None}
+    actual = set((outputs or {}).get("repurchase_patterns") or [])
+    hits = [p for p in expected if p in actual]
+    score = len(hits) / len(expected)
+    return {
+        "key": "repurchase_patterns",
+        "score": round(score, 3),
+        "comment": f"found={hits}, missing={[p for p in expected if p not in actual]}",
+    }
+
+
+def keyword_history_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    """keyword_history 항목 수가 expected_keyword_history_min 이상인지 확인."""
+    min_count = (reference_outputs or {}).get("expected_keyword_history_min")
+    if min_count is None:
+        return {"key": "keyword_history_count", "score": None}
+    actual = len((outputs or {}).get("keyword_history") or [])
+    ok = actual >= min_count
+    return {
+        "key": "keyword_history_count",
+        "score": 1.0 if ok else 0.0,
+        "comment": f"actual={actual}, min={min_count}",
+    }
+
+
+def keyword_history_products_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    """expected_keyword_history_products가 keyword_history[].product_name에 포함되는지 확인."""
+    expected = (reference_outputs or {}).get("expected_keyword_history_products")
+    if not expected:
+        return {"key": "keyword_history_products", "score": None}
+    actual_names = {h.get("product_name") for h in ((outputs or {}).get("keyword_history") or [])}
+    hits = [p for p in expected if p in actual_names]
+    score = len(hits) / len(expected)
+    return {
+        "key": "keyword_history_products",
+        "score": round(score, 3),
+        "comment": f"found={hits}, missing={[p for p in expected if p not in actual_names]}",
+    }
+
+
+def context_faithfulness_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    if (reference_outputs or {}).get("expected_cold_start"):
+        return {"key": "faithfulness", "score": None, "comment": "cold-start N/A"}
+    text = (outputs or {}).get("summary", "")
+    expected_terms = (reference_outputs or {}).get("expected_terms") or []
+    if not expected_terms:
+        return {"key": "faithfulness", "score": None}
+    hits = sum(1 for term in expected_terms if term in text)
+    return {
+        "key": "faithfulness",
+        "score": round(hits / len(expected_terms), 3),
+        "comment": f"covered={hits}/{len(expected_terms)}",
+    }
+
+
+def context_coverage_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    text = (outputs or {}).get("summary", "")
+    expected_terms = (reference_outputs or {}).get("expected_terms") or []
+    if not expected_terms:
+        return {"key": "coverage", "score": None}
+    hits = [term for term in expected_terms if term in text]
+    return {"key": "coverage", "score": 1.0 if len(hits) == len(expected_terms) else 0.0, "comment": f"{hits}"}
+
+
+def context_cold_start_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    if not (reference_outputs or {}).get("expected_cold_start"):
+        return {"key": "cold_start_pass", "score": None}
+    ok = not (outputs or {}).get("summary") and (outputs or {}).get("purchase_count", 0) == 0
+    return {"key": "cold_start_pass", "score": 1.0 if ok else 0.0}
+
+
+def context_conciseness_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    text = (outputs or {}).get("summary", "")
+    if not text:
+        return {"key": "conciseness", "score": None}
+    sentences = [s for s in re.split(r"[.!?。]\s*", text) if s.strip()]
+    return {"key": "conciseness", "score": 1.0 if len(sentences) <= 3 else 0.0, "comment": f"{len(sentences)} sentences"}
+
+
 # ── 평가기 묶음 ──────────────────────────────────────────────────────────
-INTENT_EVALUATORS = [intent_accuracy_evaluator, keyword_overlap_evaluator, needs_clarification_evaluator]
-PRODUCT_EVALUATORS = [product_ranking_evaluator]
-RESPONSE_EVALUATORS = [elderly_friendliness_evaluator]
+INTENT_EVALUATORS = [
+    intent_accuracy_evaluator,
+    keyword_overlap_evaluator,
+    needs_clarification_evaluator,
+    schema_compliance_evaluator,
+    latency_evaluator,
+]
+PRODUCT_EVALUATORS = [
+    tool_call_success_evaluator,
+    mrr_evaluator,
+    ndcg_at_3_evaluator,
+    condition_adherence_evaluator,
+    latency_evaluator,
+]
+RESPONSE_EVALUATORS = [
+    reflection_pass_evaluator,
+    haiku_fallback_evaluator,
+    elderly_friendliness_evaluator,
+    g_eval_elderly_evaluator,
+    preference_adherence_evaluator,
+    ttft_evaluator,
+]
+CONTEXT_EVALUATORS = [
+    preferred_brands_evaluator,
+    preferred_platform_evaluator,
+    price_range_evaluator,
+    repurchase_patterns_evaluator,
+    keyword_history_evaluator,
+    keyword_history_products_evaluator,
+    context_faithfulness_evaluator,
+    context_coverage_evaluator,
+    context_cold_start_evaluator,
+    context_conciseness_evaluator,
+    latency_evaluator,
+]
 E2E_EVALUATORS = [intent_accuracy_evaluator, elderly_friendliness_evaluator]

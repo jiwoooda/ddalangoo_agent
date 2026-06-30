@@ -107,9 +107,31 @@ def response_agent_node(state: ShoppingState) -> dict:
             recommended_products[current_idx] if recommended_products else None
         )
         user_question = _extract_user_question(state)
+
+        # 배송지 조회 질문 — 상품 없어도 바로 답변
+        _ADDRESS_KEYWORDS = ("배송지", "주소", "배달지", "받는 곳", "배달 주소")
+        if user_question and any(k in user_question for k in _ADDRESS_KEYWORDS):
+            from src.tools.mock_tools import mock_get_default_address
+            user_id = state.get("user_id", "")
+            addr = mock_get_default_address(user_id)
+            if addr:
+                addr_text = " ".join(filter(None, [
+                    addr.get("address_line1"), addr.get("address_line2")
+                ]))
+                msg = f"등록된 배송지는 {addr_text}이에요."
+            else:
+                msg = "등록된 배송지가 없어요. 배송지를 알려주시면 저장해 드릴게요."
+            return {
+                "explanation": msg,
+                "pending_action": {"type": "address_confirm", "message": msg},
+                "stage": state.get("stage", "idle"),
+                "last_agent": "response_agent",
+                "error": None,
+            }
+
         if not target or not user_question:
             return {
-                "stage": "product_confirming",
+                "stage": state.get("stage", "idle"),
                 "needs_clarification": True,
                 "pending_action": {
                     "type": "clarification",
@@ -124,12 +146,17 @@ def response_agent_node(state: ShoppingState) -> dict:
             question=user_question,
         ))]).content.strip()
         ok, reason = _reflect_elderly(answer)
+        haiku_fallback = False
         if not ok:
             agent_logger.log(f"[response_agent] Reflection 실패: {reason} → Haiku 재생성")
             answer = _simplify_with_haiku(answer, reason)
+            haiku_fallback = True
         agent_logger.log(f"[response_agent] QA 답변: {answer}")
         return {
             "explanation": answer,
+            "reflection_passed": ok,
+            "haiku_fallback": haiku_fallback,
+            "reflection_reason": reason,
             "stage": "product_confirming",
             "last_agent": "response_agent",
             "error": None,
@@ -157,9 +184,11 @@ def response_agent_node(state: ShoppingState) -> dict:
 
     # Reflection: 어르신 친화도 검증 → 실패 시 Haiku로 재생성
     ok, reason = _reflect_elderly(explanation)
+    haiku_fallback = False
     if not ok:
         agent_logger.log(f"[response_agent] Reflection 실패: {reason} → Haiku 재생성")
         explanation = _simplify_with_haiku(explanation, reason)
+        haiku_fallback = True
 
     agent_logger.log(f"[response_agent] 설명: {explanation}")
 
@@ -179,6 +208,9 @@ def response_agent_node(state: ShoppingState) -> dict:
 
     return {
         "explanation": explanation,
+        "reflection_passed": ok,
+        "haiku_fallback": haiku_fallback,
+        "reflection_reason": reason,
         "pending_action": {"type": "product_confirm", "message": f"{explanation_clean}\n{pending_msg}"},
         "stage": "product_confirming",
         "last_agent": "response_agent",

@@ -150,6 +150,15 @@ def _extract_user_input(state: ShoppingState) -> str:
     return ""
 
 
+def _is_ambiguous_reorder(user_input: str, keywords: list[str]) -> bool:
+    text = user_input.strip().lower()
+    if keywords:
+        return False
+    has_reorder_signal = any(token in text for token in ("다시", "또", "재주문", "똑같이", "저번", "지난번"))
+    has_ambiguous_ref = any(token in text for token in ("그거", "그것", "저거", "그 상품", "주문한 거", "산 거", "샀던 거"))
+    return has_reorder_signal and has_ambiguous_ref
+
+
 def intent_agent_node(state: ShoppingState) -> dict:
     user_input = _extract_user_input(state)
     stage = state.get("stage", "idle")
@@ -220,6 +229,16 @@ def intent_agent_node(state: ShoppingState) -> dict:
     else:
         keywords = state.get("keywords") or _normalize_keyword_tokens(parsed.keywords or [])
 
+    needs_clarification = parsed.needs_clarification
+    clarification_reason = parsed.clarification_reason
+    immediate_response = parsed.immediate_response
+
+    if _is_ambiguous_reorder(user_input, keywords):
+        intent = "reorder"
+        needs_clarification = True
+        clarification_reason = "어떤 상품을 다시 주문할지 알려주세요."
+        immediate_response = "어떤 상품을 다시 주문할까요?"
+
     # recipe 필드는 buy intent일 때만 갱신, 그 외엔 state 값 유지
     recipe_dish = parsed.recipe_dish if intent == "buy" else (parsed.recipe_dish or state.get("recipe_dish"))
     recipe_people = parsed.recipe_people if intent == "buy" else (parsed.recipe_people or state.get("recipe_people"))
@@ -237,10 +256,10 @@ def intent_agent_node(state: ShoppingState) -> dict:
         "override_platform": parsed.override_platform,
         "current_option_value": parsed.current_option_value,
         "address_text": parsed.address_text,
-        "needs_clarification": parsed.needs_clarification,
-        "clarification_reason": parsed.clarification_reason,
+        "needs_clarification": needs_clarification,
+        "clarification_reason": clarification_reason,
         "confidence": parsed.confidence if parsed.confidence > 0 else 0.9,
-        "immediate_response": parsed.immediate_response,
+        "immediate_response": immediate_response,
         "last_agent": "intent_agent",
         "tool_calls": None,
         "tool_results": None,
