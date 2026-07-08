@@ -50,7 +50,14 @@ def respond_node(state: ShoppingState) -> dict:
         msg = state.get("error") or "처리 중 문제가 발생했습니다."
 
     else:
-        msg = immediate or "무엇을 도와드릴까요?"
+        error = state.get("error")
+        _ERROR_MESSAGES = {
+            "no_candidates":        "죄송해요, 해당 상품을 찾지 못했어요. 다른 상품을 말씀해 주세요.",
+            "no_relevant_products": "죄송해요, 맞는 상품이 없어요. 다른 키워드로 말씀해 주세요.",
+            "invalid_keywords":     "상품명을 좀 더 구체적으로 말씀해 주세요.",
+            "no_more_products":     "더 이상 보여드릴 상품이 없어요.",
+        }
+        msg = _ERROR_MESSAGES.get(error, immediate or "무엇을 도와드릴까요?")
 
     agent_logger.log_respond(msg, stage, pending_action)
     return {"messages": [{"role": "assistant", "content": msg}]}

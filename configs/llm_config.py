@@ -18,7 +18,7 @@ from langchain_core.language_models import BaseChatModel
 
 _DEFAULT_MODELS: dict[str, dict[str, str]] = {
     "api": {
-        "intent":   "gpt-4o-mini",
+        "intent":   "claude-haiku-4-5-20251001",
         "product":  "claude-sonnet-4-6",
         "response": "claude-sonnet-4-6",
         "context":  "claude-haiku-4-5-20251001",
@@ -62,12 +62,14 @@ def get_llm(agent: str, **kwargs) -> BaseChatModel:
             **ollama_kwargs,
         )
 
-    if agent == "intent":
+    # intent도 Anthropic으로 통일 (gpt-4o-mini 할당량 없을 때 대비)
+    # INTENT_MODEL 환경변수로 OpenAI 모델 지정 시 ChatOpenAI 사용
+    if agent == "intent" and model.startswith("gpt"):
         from langchain_openai import ChatOpenAI
         return ChatOpenAI(model=model, **kwargs)
 
     from langchain_anthropic import ChatAnthropic
-    return ChatAnthropic(model=model, **kwargs)  # product / response / context / recipe
+    return ChatAnthropic(model=model, **kwargs)
 
 
 def reset_all_llm_caches() -> None:
