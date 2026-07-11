@@ -178,6 +178,7 @@ def _call_naver_api(
     platforms: list[str],
     sort: str,
     limit_per_platform: int = 3,
+    preferred_platform: str | None = None,
 ) -> list[dict[str, Any]]:
     """네이버 쇼핑 API 병렬 호출 (Parallelization — naver/kurly 동시 요청)."""
     client_id = os.getenv("NAVER_CLIENT_ID")
@@ -193,7 +194,9 @@ def _call_naver_api(
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(valid_platforms)) as executor:
         futures = {
             executor.submit(
-                _fetch_naver_platform, p, query, naver_sort, limit_per_platform, client_id, client_secret
+                _fetch_naver_platform, p, query, naver_sort,
+                limit_per_platform + 2 if p == preferred_platform else limit_per_platform,
+                client_id, client_secret,
             ): p
             for p in valid_platforms
         }
@@ -215,7 +218,8 @@ def search_products(
     platforms: list[str],
     condition: str = "relevance",
     budget_max: int | None = None,
-    limit_per_platform: int = 3,
+    limit_per_platform: int = 10,
+    preferred_platform: str | None = None,
 ) -> list[dict[str, Any]]:
     """
     platform_agent에서 호출하는 단일 진입점.
@@ -224,12 +228,17 @@ def search_products(
     1. META_MCP_SERVER_URL → 원격 MCP SSE
     2. NAVER_CLIENT_ID    → 네이버 쇼핑 API
     3. 내장 mock 데이터   (항상 동작)
+
+    preferred_platform이 지정된 경우 해당 플랫폼에 +2 슬롯을 추가 할당한다.
     """
     valid_platforms = [p for p in platforms if p in ("naver", "coupang", "kurly")]
     if not valid_platforms:
         valid_platforms = ["naver", "coupang"]
 
     sort = SORT_MAP.get(condition, "sim")
+
+    def _plat_limit(plat: str) -> int:
+        return limit_per_platform + 2 if plat == preferred_platform else limit_per_platform
 
     # 1. 원격 MCP
     results = _call_remote_mcp(
@@ -245,6 +254,7 @@ def search_products(
     results = _call_naver_api(
         query=query, platforms=valid_platforms, sort=sort,
         limit_per_platform=limit_per_platform,
+        preferred_platform=preferred_platform,
     )
     if results:
         if budget_max:
@@ -259,9 +269,8 @@ def search_products(
         condition=condition,
         budget_max=budget_max,
     )
-    # mock은 플랫폼별로 슬라이싱
     per_platform: dict[str, list] = {}
     for p in results:
         plat = p.get("platform", "")
         per_platform.setdefault(plat, []).append(p)
-    return [p for items in per_platform.values() for p in items[:limit_per_platform]]
+    return [p for plat, items in per_platform.items() for p in items[:_plat_limit(plat)]]

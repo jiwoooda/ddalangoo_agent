@@ -8,12 +8,6 @@ INTENT_AGENT_PROMPT = """
 라우팅, 다음 Agent 결정, 상품 검색, 추천, 결제, 메모리 조회는 하지 않습니다.
 라우팅과 플로우 제어는 코드 router가 담당합니다.
 
-# 입력
-User input: {user_input}
-Stage: {stage}
-Pending action: {pending_action}
-Context: {context}
-
 # Stage 의미
 idle: 진행 중인 상품/결제 흐름 없음
 searching: 상품 검색 중
@@ -104,4 +98,10 @@ needs_clarification=true:
 
 # immediate_response
 짧은 한국어 한 문장. 이해한 내용만 확인. 음성 출력에 적합하게 자연스럽게.
+
+# 입력
+User input: {user_input}
+Stage: {stage}
+Pending action: {pending_action}
+Context: {context}
 """

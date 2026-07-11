@@ -9,12 +9,13 @@ Product Agent Node.
 next/deny 재호출 시 검색 스킵 — 기존 recommended_products 재사용.
 """
 import json
+import re
 from typing import Any
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
+from pydantic import BaseModel
 
 from configs.llm_config import get_llm
-from langchain_core.tools import tool as lc_tool
 
 from src.state.schema import ShoppingState
 from src.tools.mock_search import search_products
@@ -49,6 +50,37 @@ CONDITION_MAP = {
     "리뷰좋은": "review_score",
     "무료배송": "free_shipping",
 }
+
+# 평균 구매가 기반 condition 추론 테이블 (threshold 이하이면 해당 condition 적용)
+_AVG_PRICE_CONDITION: list[tuple[int, str]] = [
+    (12_000, "최저가"),
+    (40_000, "가성비"),
+]
+
+
+def _derive_search_params(
+    condition: str | None,
+    preference_context: dict[str, Any],
+) -> tuple[str | None, str | None]:
+    """
+    Returns (effective_condition, preferred_platform).
+
+    - condition: intent에서 명시된 경우 우선. 없으면 구매이력 평균가로 추론.
+    - preferred_platform: preference_context.preferred_platform (ALL_PLATFORMS 내 값만)
+    """
+    effective_condition = condition
+    if not effective_condition:
+        avg = (preference_context.get("price_range") or {}).get("avg") or 0
+        for threshold, inferred in _AVG_PRICE_CONDITION:
+            if 0 < avg <= threshold:
+                effective_condition = inferred
+                break
+
+    preferred_platform = preference_context.get("preferred_platform") or None
+    if preferred_platform not in ALL_PLATFORMS:
+        preferred_platform = None
+
+    return effective_condition, preferred_platform
 
 _llm: BaseChatModel | None = None
 
@@ -131,24 +163,31 @@ def _format_preference(preference_context: dict[str, Any]) -> str:
     return "\n".join(lines) if lines else "선호 정보 없음 (구매이력 부족)"
 
 
-def _make_rank_tool(candidates: list[dict[str, Any]]):
-    label_map = {chr(ord("A") + i): p for i, p in enumerate(candidates[:26])}
+_NUM_TO_ALPHA = {str(i + 1): chr(ord("A") + i) for i in range(26)}
 
-    @lc_tool
-    def rank_products(ranked_labels: list[str], filtered_out_labels: list[str] = []) -> str:
-        """
-        후보 상품을 순위대로 정렬한다.
-        ranked_labels: 1위부터 순서대로 레이블 리스트 (예: ["C", "A", "B"])
-        filtered_out_labels: 키워드와 상품군이 달라 제외할 레이블 (예: ["D", "E"])
-        """
-        ranked = [
-            label_map[lbl.upper()]
-            for lbl in ranked_labels
-            if lbl.upper() in label_map
-        ]
-        return json.dumps(ranked, ensure_ascii=False)
 
-    return rank_products
+def _normalize_label(lbl: str) -> str:
+    s = str(lbl).strip().upper()
+    # "1" → "A", "2" → "B" 숫자 형식
+    if s in _NUM_TO_ALPHA:
+        return _NUM_TO_ALPHA[s]
+    # "[B] 상품명..." 형식에서 첫 번째 레이블 추출
+    m = re.match(r'^\[([A-Z])\]', s)
+    if m:
+        return m.group(1)
+    # 단일 알파벳
+    if len(s) == 1 and s.isalpha():
+        return s
+    # 첫 번째 알파벳 문자 (마지막 수단)
+    for c in s:
+        if c.isalpha():
+            return c
+    return s
+
+
+class _RankResult(BaseModel):
+    ranked_labels: list[str]
+    filtered_out_labels: list[str] = []
 
 
 def _filter_results(
@@ -185,36 +224,36 @@ def _rank_with_metadata(
     condition: str | None,
     preference_context: dict[str, Any],
 ) -> dict[str, Any]:
-    rank_tool = _make_rank_tool(candidates)
-    rank_response = _get_llm().bind_tools([rank_tool]).invoke([
-        HumanMessage(content=PRODUCT_RANK_PROMPT.format(
-            formatted_products=_format_products(candidates),
-            preference_context=_format_preference(preference_context),
-            keywords=json.dumps(keywords, ensure_ascii=False),
-            condition=condition or "없음",
-        ))
-    ])
-    if rank_response.tool_calls:
-        tc = rank_response.tool_calls[0]
-        try:
-            result = json.loads(rank_tool.invoke(tc["args"]))
-            if result:
+    label_map = {chr(ord("A") + i): p for i, p in enumerate(candidates[:26])}
+    try:
+        result = _get_llm().with_structured_output(_RankResult, method="json_schema").invoke([
+            HumanMessage(content=PRODUCT_RANK_PROMPT.format(
+                formatted_products=_format_products(candidates),
+                preference_context=_format_preference(preference_context),
+                keywords=json.dumps(keywords, ensure_ascii=False),
+                condition=condition or "없음",
+            ))
+        ])
+        if result and result.ranked_labels:
+            normalized = [_normalize_label(lbl) for lbl in result.ranked_labels]
+            ranked = [label_map[lbl] for lbl in normalized if lbl in label_map]
+            if ranked:
                 return {
-                    "ranked_products": result,
+                    "ranked_products": ranked,
                     "tool_call_success": True,
                     "tool_call_error": None,
                 }
-        except Exception as e:
-            agent_logger.log(f"[product_agent] rank_tool 실패: {e}")
-            return {
-                "ranked_products": candidates,
-                "tool_call_success": False,
-                "tool_call_error": str(e),
-            }
+    except Exception as e:
+        agent_logger.log(f"[product_agent] 랭킹 실패: {e}")
+        return {
+            "ranked_products": candidates,
+            "tool_call_success": False,
+            "tool_call_error": str(e),
+        }
     return {
         "ranked_products": candidates,
         "tool_call_success": False,
-        "tool_call_error": "no_tool_call",
+        "tool_call_error": "empty_output",
     }
 
 
@@ -293,10 +332,20 @@ def product_agent_node(state: ShoppingState) -> dict:
 
     # ── 전체 플랫폼 동시 검색 ──
     query = " ".join(keywords)
-    sort = CONDITION_MAP.get(condition, "relevance") if condition else "relevance"
+    effective_condition, preferred_platform = _derive_search_params(condition, preference_context)
+    sort = CONDITION_MAP.get(effective_condition, "relevance") if effective_condition else "relevance"
 
-    agent_logger.log(f"[product_agent] 검색 | query={query}  platforms={ALL_PLATFORMS}")
-    raw_results = search_products(query=query, platforms=ALL_PLATFORMS, condition=sort)
+    agent_logger.log(
+        f"[product_agent] 검색 | query={query}  sort={sort}"
+        f"  preferred_platform={preferred_platform}"
+        f"  (condition={condition!r} → effective={effective_condition!r})"
+    )
+    raw_results = search_products(
+        query=query,
+        platforms=ALL_PLATFORMS,
+        condition=sort,
+        preferred_platform=preferred_platform,
+    )
     candidates = _filter_results(raw_results, exclude_keywords)
 
     if not candidates:

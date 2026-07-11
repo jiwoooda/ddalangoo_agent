@@ -14,7 +14,20 @@ LLM 팩토리.
   OLLAMA_BASE_URL=http://localhost:11434
 """
 import os
+import threading
 from langchain_core.language_models import BaseChatModel
+
+# ── eval 실험용 thread-local 콜백 저장소 ────────────────────────────────
+_eval_local = threading.local()
+
+
+def set_eval_callbacks(callbacks: list) -> None:
+    """실험 실행 전 등록. 이후 get_llm()이 생성하는 모델에 자동 주입."""
+    _eval_local.callbacks = list(callbacks)
+
+
+def clear_eval_callbacks() -> None:
+    _eval_local.callbacks = []
 
 _DEFAULT_MODELS: dict[str, dict[str, str]] = {
     "api": {
@@ -25,11 +38,25 @@ _DEFAULT_MODELS: dict[str, dict[str, str]] = {
         "recipe":   "claude-haiku-4-5-20251001",
     },
     "ollama": {
-        "intent":   "llama3.2",
-        "product":  "llama3.1:8b",
-        "response": "llama3.1:8b",
-        "context":  "llama3.2:1b",
-        "recipe":   "llama3.2",
+        # A후보 기본값. B후보는 --model 옵션으로 오버라이드.
+        # intent   A=qwen3:32b         B=qwen2.5:72b
+        # product  A=xlam-2:32b-fc-r   B=qwen3:32b    (xLAM: FC 특화, BFCL rank 18)
+        # context  A=qwen2.5:14b       B=qwen3:8b
+        # response A=qwen2.5:7b        B=exaone3.5:7.8b
+        "intent":   "qwen3:32b",
+        "product":  "xlam-2:32b-fc-r",
+        "response": "qwen2.5:7b",
+        "context":  "qwen2.5:14b",
+        "recipe":   "qwen2.5:7b",
+    },
+    "vllm": {
+        # vLLM OpenAI-compatible 서버 (A100 × 2, AWQ int4 ~18GB)
+        # Qwen2.5-32B-Instruct-AWQ: 추론·맥락 이해 강점, Qwen2ForCausalLM (vLLM 0.6.6 지원)
+        "intent":   "/home/tta/models/qwen2.5-32b-instruct-awq",
+        "product":  "/home/tta/models/qwen2.5-32b-instruct-awq",
+        "response": "/home/tta/models/qwen2.5-32b-instruct-awq",
+        "context":  "/home/tta/models/qwen2.5-32b-instruct-awq",
+        "recipe":   "/home/tta/models/qwen2.5-32b-instruct-awq",
     },
 }
 
@@ -50,6 +77,12 @@ def get_llm(agent: str, **kwargs) -> BaseChatModel:
     backend = os.getenv("LLM_BACKEND", "api")
     model = os.getenv(_ENV_KEYS[agent], _DEFAULT_MODELS[backend][agent])
 
+    # eval 실험 콜백 주입 (set_eval_callbacks 로 등록된 경우)
+    extra_cbs = list(getattr(_eval_local, 'callbacks', None) or [])
+    if extra_cbs:
+        existing = list(kwargs.pop('callbacks', None) or [])
+        kwargs['callbacks'] = existing + extra_cbs
+
     if backend == "ollama":
         from langchain_ollama import ChatOllama
         # Ollama는 max_tokens 대신 num_predict 사용
@@ -60,6 +93,15 @@ def get_llm(agent: str, **kwargs) -> BaseChatModel:
             model=model,
             base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
             **ollama_kwargs,
+        )
+
+    if backend == "vllm":
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model=model,
+            base_url=os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1"),
+            api_key="EMPTY",
+            **kwargs,
         )
 
     # intent도 Anthropic으로 통일 (gpt-4o-mini 할당량 없을 때 대비)

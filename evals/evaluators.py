@@ -84,12 +84,36 @@ def needs_clarification_evaluator(outputs: dict, reference_outputs: dict) -> dic
 
 
 def schema_compliance_evaluator(outputs: dict, reference_outputs: dict) -> dict:
-    """Pydantic structured output 성공 여부. predict 예외 시 _schema_ok=false."""
+    """Pydantic structured output 성공 여부 (Strict). predict 예외 시 _schema_ok=false."""
     ok = not (outputs or {}).get("_error") and (outputs or {}).get("_schema_ok", True)
     return {
         "key": "schema_compliance",
         "score": 1.0 if ok else 0.0,
         "comment": (outputs or {}).get("_error", "통과"),
+    }
+
+
+_LOOSE_REQUIRED = {"intent", "keywords", "needs_clarification", "confidence"}
+_VALID_INTENTS = {
+    "buy", "reorder", "confirm", "deny", "next", "refine",
+    "compare_platforms", "quantity_change", "address_change",
+    "option_select", "ask", "cancel", "unclear",
+}
+
+
+def schema_loose_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    """핵심 키 존재 + intent 유효 여부 (Loose).
+    Strict 실패 + Loose 통과 → 프롬프트 수정으로 해결 가능.
+    Strict 실패 + Loose 실패 → 모델 체급 한계.
+    """
+    out = outputs or {}
+    missing = [f for f in _LOOSE_REQUIRED if f not in out]
+    intent_valid = out.get("intent") in _VALID_INTENTS
+    ok = not missing and intent_valid
+    return {
+        "key": "schema_loose",
+        "score": 1.0 if ok else 0.0,
+        "comment": "통과" if ok else f"missing={missing}, intent_valid={intent_valid}",
     }
 
 
@@ -257,24 +281,66 @@ def haiku_fallback_evaluator(outputs: dict, reference_outputs: dict) -> dict:
     return {"key": "haiku_fallback_rate", "score": 1.0 if used else 0.0}
 
 
+_G_EVAL_CRITERIA = """\
+당신은 70대 어르신을 위한 쇼핑 안내 문장을 평가하는 채점자입니다.
+아래 기준으로 1~5점을 매기세요.
+
+[채점 기준]
+5점: 짧고 담백하며 핵심 정보(상품명·가격·배송)가 명확히 포함됨. 쉬운 말만 사용.
+4점: 핵심 정보 있고 이해하기 쉬우나 문장이 약간 긺.
+3점: 정보는 있지만 문장이 복잡하거나 어색함.
+2점: 핵심 정보 부족하거나 이해하기 어려운 단어 포함.
+1점: 어르신이 이해하기 어려운 전문 용어·미사여구 다수 포함.
+
+[편향 방지 규칙 — 반드시 준수]
+- 짧고 담백해도 핵심 정보(상품명·가격 등)가 있으면 높은 점수를 줄 것
+- 문장이 길거나 미사여구가 많으면 감점
+- 아래 어려운 단어가 하나라도 있으면 즉시 -2점: 플랫폼, 할인율, 할인가, 프로모션, 혜택
+- 문장 수가 4개 이상이면 -1점
+- 한 문장이 35자를 넘으면 -1점
+"""
+
+
 def g_eval_elderly_evaluator(outputs: dict, reference_outputs: dict) -> dict:
-    """G-Eval 대체 로컬 루브릭. DeepEval judge 연결 전에도 추세 확인 가능."""
+    """G-Eval: Claude judge로 어르신 친화도 1~5점 채점. 편향 방지 규칙 포함."""
     text = (outputs or {}).get("explanation", "")
     if not text:
         return {"key": "g_eval_elderly", "score": 0.0, "comment": "explanation 없음"}
-    ok, reason = _check_elderly_friendly(text)
-    has_price = bool(re.search(r"\d", text))
-    score_5 = 5
-    if not ok:
-        score_5 -= 2
-    if not has_price:
-        score_5 -= 1
-    score_5 = max(1, min(5, score_5))
-    return {
-        "key": "g_eval_elderly",
-        "score": score_5 / 5,
-        "comment": f"{score_5}/5; {reason or '짧고 쉬움'}",
-    }
+
+    try:
+        from deepeval.metrics import GEval
+        from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+
+        judge = _make_deepeval_claude_model()
+        metric = GEval(
+            name="elderly_friendliness",
+            criteria=_G_EVAL_CRITERIA,
+            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            model=judge,
+            verbose_mode=False,
+        )
+        test_case = LLMTestCase(input="쇼핑 안내 문장 평가", actual_output=text)
+        metric.measure(test_case)
+        return {
+            "key": "g_eval_elderly",
+            "score": round(metric.score, 3),
+            "comment": metric.reason or "",
+        }
+    except Exception as e:
+        # fallback: 로컬 루브릭
+        ok, reason = _check_elderly_friendly(text)
+        has_price = bool(re.search(r"\d", text))
+        score_5 = 5
+        if not ok:
+            score_5 -= 2
+        if not has_price:
+            score_5 -= 1
+        score_5 = max(1, min(5, score_5))
+        return {
+            "key": "g_eval_elderly",
+            "score": score_5 / 5,
+            "comment": f"fallback({e}): {score_5}/5; {reason or '짧고 쉬움'}",
+        }
 
 
 def preference_adherence_evaluator(outputs: dict, reference_outputs: dict) -> dict:
@@ -303,6 +369,43 @@ def ttft_evaluator(outputs: dict, reference_outputs: dict) -> dict:
     if ttft_ms is None:
         return {"key": "ttft_ms", "score": None}
     return {"key": "ttft_ms", "score": float(ttft_ms), "comment": f"{ttft_ms:.1f}ms"}
+
+
+def input_tokens_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    val = (outputs or {}).get("input_tokens")
+    if val is None:
+        return {"key": "input_tokens", "score": None}
+    return {"key": "input_tokens", "score": float(val), "comment": f"{val} tokens"}
+
+
+def output_tokens_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    val = (outputs or {}).get("output_tokens")
+    if val is None:
+        return {"key": "output_tokens", "score": None}
+    return {"key": "output_tokens", "score": float(val), "comment": f"{val} tokens"}
+
+
+def cost_usd_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    val = (outputs or {}).get("cost_usd")
+    if val is None:
+        return {"key": "cost_usd", "score": None}
+    return {"key": "cost_usd", "score": float(val), "comment": f"${val:.6f}"}
+
+
+def hallucination_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    """ranked_products 이름이 expected_candidate_names 밖에 있으면 환각으로 판정."""
+    candidates = (reference_outputs or {}).get("expected_candidate_names")
+    if not candidates:
+        return {"key": "hallucination_free_rate", "score": None, "comment": "expected_candidate_names 없음"}
+    allowed = set(candidates)
+    ranked = (outputs or {}).get("ranked_products") or []
+    hallucinated = [p.get("product_name") for p in ranked if p.get("product_name") not in allowed]
+    score = 0.0 if hallucinated else 1.0
+    return {
+        "key": "hallucination_free_rate",
+        "score": score,
+        "comment": f"환각={hallucinated}" if hallucinated else f"통과 ({len(ranked)}개 검사)",
+    }
 
 
 # ── context_agent 평가기 ────────────────────────────────────────────────
@@ -401,34 +504,65 @@ def keyword_history_products_evaluator(outputs: dict, reference_outputs: dict) -
 
 
 def _make_deepeval_claude_model():
-    """DeepEval judge용 Claude 모델 래퍼."""
+    """DeepEval judge용 Claude 모델 래퍼.
+    LangChain을 우회해 Anthropic SDK를 직접 사용 — evaluate() 컨텍스트의
+    LangChainTracer가 judge 호출을 추적하지 않도록 해 zstd OOM을 방지.
+    """
     from deepeval.models import DeepEvalBaseLLM
+    import json as _json
 
     class ClaudeJudge(DeepEvalBaseLLM):
         def __init__(self):
-            self.model_name = os.getenv("CONTEXT_MODEL", "claude-haiku-4-5-20251001")
+            self.model_name = os.getenv("ANTHROPIC_JUDGE_MODEL",
+                                        os.getenv("CONTEXT_MODEL", "claude-haiku-4-5-20251001"))
 
         def get_model_name(self) -> str:
             return self.model_name
 
         def load_model(self):
-            from langchain_anthropic import ChatAnthropic
-            return ChatAnthropic(model=self.model_name, temperature=0, max_tokens=1024)
+            return self  # Anthropic SDK 직접 사용, LangChain 모델 객체 불필요
+
+        def _call_anthropic(self, prompt: str, max_tokens: int = 1024) -> str:
+            import anthropic
+            client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+            resp = client.messages.create(
+                model=self.model_name,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return resp.content[0].text
 
         def generate(self, prompt: str, schema=None) -> tuple:
-            model = self.load_model()
-            from langchain_core.messages import HumanMessage
-            if schema:
-                structured = model.with_structured_output(schema)
-                result = structured.invoke([HumanMessage(content=prompt)])
-                return result, 0
-            result = model.invoke([HumanMessage(content=prompt)])
-            return result.content, 0
+            text = self._call_anthropic(prompt)
+            if schema is not None:
+                try:
+                    data = _json.loads(text)
+                    return schema(**data), 0
+                except Exception:
+                    pass
+            return text, 0
 
         async def a_generate(self, prompt: str, schema=None) -> tuple:
             return self.generate(prompt, schema)
 
     return ClaudeJudge()
+
+
+def context_coverage_evaluator(outputs: dict, reference_outputs: dict) -> dict:
+    """expected_terms(브랜드/가격대/플랫폼 핵심 키워드)가 summary에 포함됐는지 확인."""
+    if (reference_outputs or {}).get("expected_cold_start"):
+        return {"key": "coverage", "score": None, "comment": "cold-start N/A"}
+    expected_terms = (reference_outputs or {}).get("expected_terms")
+    if not expected_terms:
+        return {"key": "coverage", "score": None, "comment": "expected_terms 없음"}
+    summary = (outputs or {}).get("summary", "")
+    hits = [t for t in expected_terms if t in summary]
+    score = round(len(hits) / len(expected_terms), 3)
+    return {
+        "key": "coverage",
+        "score": score,
+        "comment": f"{len(hits)}/{len(expected_terms)} 포함: {hits}",
+    }
 
 
 def context_faithfulness_evaluator(outputs: dict, reference_outputs: dict) -> dict:
@@ -493,19 +627,27 @@ def context_conciseness_evaluator(outputs: dict, reference_outputs: dict) -> dic
 
 
 # ── 평가기 묶음 ──────────────────────────────────────────────────────────
+_TOKEN_COST_EVALUATORS = [input_tokens_evaluator, output_tokens_evaluator, cost_usd_evaluator]
+
 INTENT_EVALUATORS = [
     intent_accuracy_evaluator,
     keyword_overlap_evaluator,
     needs_clarification_evaluator,
     schema_compliance_evaluator,
+    schema_loose_evaluator,
     latency_evaluator,
+    ttft_evaluator,
+    *_TOKEN_COST_EVALUATORS,
 ]
 PRODUCT_EVALUATORS = [
     tool_call_success_evaluator,
     mrr_evaluator,
     ndcg_at_3_evaluator,
     condition_adherence_evaluator,
+    hallucination_evaluator,
     latency_evaluator,
+    ttft_evaluator,
+    *_TOKEN_COST_EVALUATORS,
 ]
 RESPONSE_EVALUATORS = [
     reflection_pass_evaluator,
@@ -514,6 +656,8 @@ RESPONSE_EVALUATORS = [
     g_eval_elderly_evaluator,
     preference_adherence_evaluator,
     ttft_evaluator,
+    latency_evaluator,
+    *_TOKEN_COST_EVALUATORS,
 ]
 CONTEXT_EVALUATORS = [
     preferred_brands_evaluator,
@@ -522,9 +666,12 @@ CONTEXT_EVALUATORS = [
     repurchase_patterns_evaluator,
     keyword_history_evaluator,
     keyword_history_products_evaluator,
-    context_faithfulness_evaluator,   # DeepEval Faithfulness (fallback: keyword)
+    context_coverage_evaluator,        # 핵심 키워드 포함 여부
+    context_faithfulness_evaluator,    # DeepEval Faithfulness (fallback: keyword)
     context_cold_start_evaluator,
     context_conciseness_evaluator,
     latency_evaluator,
+    ttft_evaluator,
+    *_TOKEN_COST_EVALUATORS,
 ]
 E2E_EVALUATORS = [intent_accuracy_evaluator, elderly_friendliness_evaluator]

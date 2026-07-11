@@ -6,7 +6,7 @@ with_structured_output(Pydantic)으로 스키마를 강제해 누락 방지.
 """
 import re
 from typing import Literal, Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from configs.llm_config import get_llm
@@ -129,11 +129,6 @@ class IntentOutput(BaseModel):
     confidence: float = Field(default=0.95, description="의도 해석 확신도 0.0~1.0")
     immediate_response: str = Field(default="", description="음성 출력용 한 문장 응답")
 
-    @field_validator("quantity", mode="before")
-    @classmethod
-    def coerce_quantity(cls, v):
-        return _parse_quantity(v)
-
 
 _llm = None
 _structured_llm = None
@@ -143,7 +138,7 @@ def _get_llm():
     global _llm, _structured_llm
     if _llm is None:
         _llm = get_llm("intent", temperature=0)
-        _structured_llm = _llm.with_structured_output(IntentOutput)
+        _structured_llm = _llm.with_structured_output(IntentOutput, method="json_schema")
     return _structured_llm
 
 
@@ -227,7 +222,7 @@ def intent_agent_node(state: ShoppingState) -> dict:
     if _should_force_buy_from_freeform(user_input, intent, stage):
         intent = "buy"
 
-    quantity = parsed.quantity
+    quantity = _parse_quantity(parsed.quantity)
     # quantity_confirm 또는 product_confirm(수량 미입력) 대기 중 수량 답변 → 재파싱 + intent 교정
     if pending_type in ("quantity_confirm", "product_confirm"):
         if _looks_like_quantity_reply(user_input):

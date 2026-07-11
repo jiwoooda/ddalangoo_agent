@@ -1,7 +1,7 @@
 {
   "dataset_name": "response_testset_v1",
-  "description": "딸랑구 response_agent 노인친화도 평가셋 v1 (일반 설명 5 / Reflection 트리거 5 / QA 5 / 선호도 반영 5)",
-  "version": "1",
+  "description": "딸랑구 response_agent 노인친화도 평가셋 v2 (일반 설명 5 / Reflection 트리거 5 / QA 5 / 선호도 반영 5 / 재생성_루프 3)",
+  "version": "2",
   "evaluation_criteria": {
     "max_sentences": 3,
     "max_sentence_length": 35,
@@ -222,6 +222,52 @@
         "preference_context": {"summary": "컬리 신선식품과 새벽배송을 자주 이용합니다.", "keyword_summary": "과일 구매 이력이 있습니다."}
       },
       "output": {"expected_elderly_pass": true, "expected_preference_used": true, "expected_preference_terms": ["컬리"]}
+    },
+
+    {
+      "_comment": "── 재생성_루프 (3) ── reflection retry 유발 → latency 영향 측정",
+      "input": {
+        "task": "explain",
+        "product": {"product_name": "GNM 자연의품격 종합비타민 60정", "price": 18900, "platform": "naver", "rating": 4.7, "review_count": 3200, "delivery": "내일 도착", "product_url": "https://example.com/rl1"},
+        "keywords": ["종합비타민"],
+        "condition": "가성비",
+        "preference_context": {}
+      },
+      "output": {
+        "expected_elderly_pass": true,
+        "expected_reflection_loops": true,
+        "note": "condition=가성비 → forbidden_word '가성비' 포함 위험 → 재생성 루프 발생 가능. 최종 출력은 어르신 친화 기준 통과 필요"
+      }
+    },
+
+    {
+      "input": {
+        "task": "explain",
+        "product": {"product_name": "신라면 멀티팩 5개입", "price": 3900, "platform": "coupang", "rating": 4.8, "review_count": 15200, "delivery": "로켓배송", "product_url": "https://example.com/rl2"},
+        "keywords": ["라면"],
+        "condition": "최저가",
+        "preference_context": {}
+      },
+      "output": {
+        "expected_elderly_pass": true,
+        "expected_reflection_loops": true,
+        "note": "condition=최저가 → forbidden_word '최저가' 포함 위험 → 재생성 루프 발생 가능. 최종 출력은 어르신 친화 기준 통과 필요"
+      }
+    },
+
+    {
+      "input": {
+        "task": "explain",
+        "product": {"product_name": "쿠팡 로켓프레시 유기농 달걀 30구", "price": 9800, "platform": "coupang", "rating": 4.6, "review_count": 5600, "delivery": "로켓배송", "product_url": "https://example.com/rl3"},
+        "keywords": ["달걀"],
+        "condition": null,
+        "preference_context": {}
+      },
+      "output": {
+        "expected_elderly_pass": true,
+        "expected_reflection_loops": true,
+        "note": "상품명에 '쿠팡' 포함 → forbidden_word '플랫폼' 언급 유혹 → 재생성 루프 발생 가능. 최종 출력은 어르신 친화 기준 통과 필요"
+      }
     }
   ]
 }

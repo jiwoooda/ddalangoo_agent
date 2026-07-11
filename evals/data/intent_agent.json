@@ -446,7 +446,7 @@
       "pending_action": null
     },
     "expected_output": {
-      "intent": "unclear",
+      "intent": "buy",
       "keywords": [],
       "exclude_keywords": [],
       "quantity": null,
@@ -456,7 +456,7 @@
       "clarification_reason": "어떤 상품을 원하시는지 확인 필요",
       "immediate_response": "어떤 상품을 찾고 계세요?"
     },
-    "note": "idle + 맥락 없는 지시어"
+    "note": "구매 의도는 명확하지만 대상 불명 → buy + clarification / unclear는 발화 자체를 못 알아들었을 때만"
   },
   {
     "id": 24,

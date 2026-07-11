@@ -1,7 +1,7 @@
 {
   "dataset_name": "product_testset_v1",
-  "description": "딸랑구 product_agent 랭킹 평가셋 v2 — 선호도 기반 5 / 조건+선호도 충돌 5 / 제외+선호도 복합 5 / 콜드스타트 5 / 엣지 5 (총 25케이스)",
-  "version": "2",
+  "description": "딸랑구 product_agent 랭킹 평가셋 v3 — 선호도 기반 5 / 조건+선호도 충돌 5 / 제외+선호도 복합 5 / 콜드스타트 5 / 엣지 5 / 환각_방지 5 (총 30케이스)",
+  "version": "3",
   "cases": [
 
     {
@@ -114,8 +114,8 @@
       },
       "output": {
         "expected_top_product": "CJ 국산 참기름 300ml",
-        "expected_ranking": ["CJ 국산 참기름 300ml", "오뚜기 참기름 500ml", "컬리 국산 참기름 200ml"],
-        "note": "keyword_history + preferred_brand CJ + preferred_platform naver 삼중 일치"
+        "expected_ranking": ["CJ 국산 참기름 300ml", "컬리 국산 참기름 200ml", "오뚜기 참기름 500ml"],
+        "note": "keyword_history + preferred_brand CJ + preferred_platform naver 삼중 일치 / 2위=컬리(₩13,800) > 3위=오뚜기(₩15,900) — 선호 가격대(avg 8000) 기준 더 가까운 컬리 우선"
       }
     },
 
@@ -626,10 +626,10 @@
         ]
       },
       "output": {
-        "expected_top_product": "논산 딸기 500g 특품",
+        "expected_top_product": "프리미엄 딸기 1kg",
         "condition_rule": "rating_highest",
-        "expected_ranking": ["논산 딸기 500g 특품", "설향 딸기 500g", "프리미엄 딸기 1kg"],
-        "note": "1위=condition(4.8, 리뷰충분), 2위=keyword_history 설향(preference), 3위=프리미엄(4.9이나 310리뷰만)"
+        "expected_ranking": ["프리미엄 딸기 1kg", "설향 딸기 500g", "논산 딸기 500g 특품"],
+        "note": "1위=최고평점(★4.9, condition 충족), 2위=keyword_history 설향(preference), 3위=논산(★4.8이나 preference 없음) / 리뷰좋은=평점 기준, 리뷰수로 순위 조정 금지"
       }
     },
 
@@ -659,6 +659,96 @@
         "condition_rule": "price_lowest",
         "expected_ranking": ["일반 계란 15구", "[조인] 동물복지 달걀 10구", "구운 계란 20구"],
         "note": "1위=최저가(3,500원), 2위=keyword_history 동물복지(preference), 3위=구운 계란"
+      }
+    },
+
+    {
+      "_comment": "── 환각_방지 (5) ── ranked_products가 candidates 목록 이름만 사용하는지 검증",
+      "input": {
+        "keywords": ["사과"],
+        "condition": null,
+        "preference_context": {},
+        "candidates": [
+          {"product_name": "경북 부사 사과 3kg", "price": 18900, "platform": "coupang", "rating": 4.8, "review_count": 1560, "product_url": "https://example.com/h1", "delivery": "로켓배송"}
+        ]
+      },
+      "output": {
+        "expected_top_product": "경북 부사 사과 3kg",
+        "expected_candidate_names": ["경북 부사 사과 3kg"],
+        "note": "단일 후보 — 모델이 없는 상품(예: GAP 사과 등)을 발명하면 환각"
+      }
+    },
+
+    {
+      "input": {
+        "keywords": ["참기름"],
+        "condition": "최저가",
+        "preference_context": {},
+        "candidates": [
+          {"product_name": "컬리 국산 참기름 200ml", "price": 13790, "platform": "kurly", "rating": 4.6, "review_count": 430, "product_url": "https://example.com/h2", "delivery": "새벽배송"},
+          {"product_name": "오뚜기 참기름 320ml", "price": 8450, "platform": "coupang", "rating": 4.5, "review_count": 2100, "product_url": "https://example.com/h3", "delivery": "로켓배송"}
+        ]
+      },
+      "output": {
+        "expected_top_product": "오뚜기 참기름 320ml",
+        "condition_rule": "price_lowest",
+        "expected_candidate_names": ["컬리 국산 참기름 200ml", "오뚜기 참기름 320ml"],
+        "note": "비정형 가격(13790/8450) — 반올림해 새 상품명 발명 방지"
+      }
+    },
+
+    {
+      "input": {
+        "keywords": ["두부"],
+        "condition": null,
+        "preference_context": {},
+        "candidates": [
+          {"product_name": "풀무원 국산콩 두부 찌개용 300g", "price": 2490, "platform": "coupang", "rating": 4.7, "review_count": 8200, "product_url": "https://example.com/h4", "delivery": "로켓배송"},
+          {"product_name": "풀무원 국산콩 두부 부침용 300g", "price": 2490, "platform": "coupang", "rating": 4.7, "review_count": 6100, "product_url": "https://example.com/h5", "delivery": "로켓배송"},
+          {"product_name": "풀무원 순두부 연두부 400g", "price": 1990, "platform": "naver", "rating": 4.5, "review_count": 3300, "product_url": "https://example.com/h6", "delivery": "내일 도착"}
+        ]
+      },
+      "output": {
+        "expected_top_product": "풀무원 국산콩 두부 찌개용 300g",
+        "expected_candidate_names": ["풀무원 국산콩 두부 찌개용 300g", "풀무원 국산콩 두부 부침용 300g", "풀무원 순두부 연두부 400g"],
+        "note": "유사 상품명 3종 — 모델이 이름을 혼합해 존재하지 않는 제품명 생성 방지"
+      }
+    },
+
+    {
+      "input": {
+        "keywords": ["빵"],
+        "condition": "리뷰좋은",
+        "preference_context": {},
+        "candidates": [
+          {"product_name": "파리바게뜨 우유식빵", "price": 3800, "platform": "naver", "rating": 4.6, "review_count": 920, "product_url": "https://example.com/h7", "delivery": "내일 도착"},
+          {"product_name": "뚜레쥬르 크림빵", "price": 3200, "platform": "coupang", "rating": null, "review_count": 0, "product_url": "https://example.com/h8", "delivery": "로켓배송"},
+          {"product_name": "신라명과 케이크 롤", "price": 9900, "platform": "kurly", "rating": 4.8, "review_count": 450, "product_url": "https://example.com/h9", "delivery": "새벽배송"}
+        ]
+      },
+      "output": {
+        "expected_top_product": "신라명과 케이크 롤",
+        "condition_rule": "rating_highest",
+        "expected_candidate_names": ["파리바게뜨 우유식빵", "뚜레쥬르 크림빵", "신라명과 케이크 롤"],
+        "note": "평점 없는 후보 포함 — 모델이 임의 평점을 발명해 뚜레쥬르를 1위로 올리면 환각"
+      }
+    },
+
+    {
+      "input": {
+        "keywords": ["운동화"],
+        "condition": "최저가",
+        "preference_context": {},
+        "candidates": [
+          {"product_name": "뉴발란스 530 스니커즈", "price": 89000, "platform": "naver", "rating": 4.7, "review_count": 3400, "product_url": "https://example.com/h10", "delivery": "2-3일"},
+          {"product_name": "아디다스 울트라부스트", "price": 149000, "platform": "coupang", "rating": 4.9, "review_count": 1200, "product_url": "https://example.com/h11", "delivery": "로켓배송"}
+        ]
+      },
+      "output": {
+        "expected_top_product": "뉴발란스 530 스니커즈",
+        "condition_rule": "price_lowest",
+        "expected_candidate_names": ["뉴발란스 530 스니커즈", "아디다스 울트라부스트"],
+        "note": "최저가 2개 후보 — 모델이 더 싼 가상 상품(예: '브랜드 운동화 59,000원')을 발명하면 환각"
       }
     }
 
